@@ -16,14 +16,14 @@ MonoBehaviour:
   - level: 1
     tiles_in_a_row: 2
     tiles_in_a_column: 2
-    targetWhiteTiles: 2
+    targetWhiteTiles: 3
     timeLimit: 20
     moveLimit: 3
-    seed: 4400
+    seed: 3102420
   - level: 2
     tiles_in_a_row: 2
     tiles_in_a_column: 2
     targetWhiteTiles: 2
     timeLimit: 20
     moveLimit: 20
-    seed: 4004
+    seed: 24010
