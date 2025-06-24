@@ -4,10 +4,13 @@ using System.Threading.Tasks;
 using UnityEngine;
 using GameEvents;
 using NUnit.Framework.Interfaces;
+using System.Collections.Generic;
+using System;
 
 
 public class FusionProcessor : MonoBehaviour, IGameSystem
 {
+    List<IDisposable> disposables = new List<IDisposable>();
 
     public void Initialize()
     {
@@ -21,12 +24,15 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
 
     private void SubscribeEvents()
     {
-        EventBus.Subscribe<TileFuseEvent>(OnTileFuse);
+        disposables.Add(EventBus.Subscribe<TileFuseEvent>(OnTileFuse));
     }
 
     private void UnsubscribeEvents()
     {
-        
+        foreach (var d in disposables)
+        {
+            d?.Dispose();
+        }
     }
     async Task OnTileFuse(TileFuseEvent e)
     {

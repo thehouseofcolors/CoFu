@@ -220,6 +220,7 @@ public class Tile : MonoBehaviour
     private void ProcessColorMerge(Tile target, ColorVector color)
     {
         var targetColor = target.IsEmpty ? color : ColorFusion.Fuse(color, target.PeekColor());
+        target.PopTopColor();
         target.PushColor(targetColor);
     }
 
