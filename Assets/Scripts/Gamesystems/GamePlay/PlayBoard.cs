@@ -29,8 +29,7 @@ public class PlayBoardManager : MonoBehaviour, IGameSystem
     {
         _eventSubscriptions.Add(EventBus.Subscribe<GameLoadEvent>(OnLevelLoad));
         _eventSubscriptions.Add(EventBus.Subscribe<GamePauseEvent>(OnGamePause));
-        // _eventSubscriptions.Add(EventBus.Subscribe<GameResumeEvent>(OnGameResume));
-        _eventSubscriptions.Add(EventBus.Subscribe<GameWinEvent>(OnGameWin));
+        _eventSubscriptions.Add(EventBus.Subscribe<GameResumeEvent>(OnGameResume));
     }
 
     private void UnsubscribeEvents()
@@ -99,7 +98,7 @@ public class PlayBoardManager : MonoBehaviour, IGameSystem
         await SetupGrid(e.Level);
     }
 
-    private async Task OnGameWin(GameWinEvent e)
+    private async Task OnGameWin()
     {
         ClearGrid();
         await Task.CompletedTask;
@@ -111,11 +110,11 @@ public class PlayBoardManager : MonoBehaviour, IGameSystem
         await Task.CompletedTask;
     }
 
-    // private async Task OnGameResume(GameResumeEvent e)
-    // {
-    //     SetTilesSelectable(true);
-    //     await Task.CompletedTask;
-    // }
+    private async Task OnGameResume(GameResumeEvent e)
+    {
+        SetTilesSelectable(true);
+        await Task.CompletedTask;
+    }
 
     private void SetTilesSelectable(bool selectable)
     {
@@ -127,20 +126,29 @@ public class PlayBoardManager : MonoBehaviour, IGameSystem
 
     private void ClearGrid()
     {
-        // Destroy all tiles
-        foreach (var tile in _allTiles)
+        try
         {
-            if (tile != null && tile.gameObject != null)
+            // Destroy all tiles
+            foreach (var tile in _allTiles)
             {
-                Destroy(tile.gameObject);
+                if (tile != null && tile.gameObject != null)
+                {
+                    Destroy(tile.gameObject);
+                }
+            }
+            _allTiles.Clear();
+
+            // Additional cleanup of any leftover objects
+            foreach (Transform child in _gridParent)
+            {
+                Destroy(child.gameObject);
             }
         }
-        _allTiles.Clear();
-
-        // Additional cleanup of any leftover objects
-        foreach (Transform child in _gridParent)
+        catch (Exception ex)
         {
-            Destroy(child.gameObject);
+            Debug.LogError($"Cleargrid failed: {ex.Message}");
+            throw; // Re-throw to maintain error flow
         }
+
     }
 }

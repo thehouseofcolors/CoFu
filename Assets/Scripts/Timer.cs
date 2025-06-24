@@ -71,7 +71,7 @@ public class GameTimer : Singleton<GameTimer>
             {
                 if (_isPaused)
                 {
-                    EventBus.PublishSync(new UpdateTimerUIEvent(_remainingTime));
+                    EventBus.PublishAuto(new UpdateTimerUIEvent(_remainingTime));
                     await Task.Delay(100, token);
                     continue;
                 }
@@ -80,7 +80,7 @@ public class GameTimer : Singleton<GameTimer>
                 if (token.IsCancellationRequested) break;
 
                 _remainingTime -= 1f;
-                EventBus.PublishSync(new UpdateTimerUIEvent(_remainingTime));
+                EventBus.PublishAuto(new UpdateTimerUIEvent(_remainingTime));
             }
 
             if (_remainingTime <= 0 && !token.IsCancellationRequested)

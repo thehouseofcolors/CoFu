@@ -1,43 +1,38 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
-
+[RequireComponent(typeof(IGameSystem))]
 public class GameCore : MonoBehaviour
 {
-    private readonly HashSet<IGameSystem> _systems = new HashSet<IGameSystem>();
+    private HashSet<IGameSystem> _systems;
 
-    private void Start()
+    private void Awake()
     {
-        foreach (var system in GetComponents<IGameSystem>())
+        _systems = new HashSet<IGameSystem>(GetComponents<IGameSystem>());
+        foreach (var system in _systems)
         {
-            RegisterSystem(system);
+            system.Initialize();
         }
     }
+
     public void RegisterSystem(IGameSystem system)
     {
         if (system == null || !_systems.Add(system)) return;
-
         system.Initialize();
-        Debug.Log($"[System] Initialized: {system.GetType().Name}");
     }
 
     public void UnregisterSystem(IGameSystem system)
     {
         if (system == null || !_systems.Remove(system)) return;
-
         system.Shutdown();
-        Debug.Log($"[System] Shutdown: {system.GetType().Name}");
     }
 
     private void OnDestroy()
     {
         foreach (var system in _systems)
         {
-            system.Shutdown();
-            Debug.Log($"[System] Shutdown (OnDestroy): {system.GetType().Name}");
+            system?.Shutdown();
         }
-
         _systems.Clear();
     }
 
@@ -45,14 +40,22 @@ public class GameCore : MonoBehaviour
     {
         foreach (var system in _systems)
         {
-            if (system is T typedSystem)
-            {
-                return typedSystem;
-            }
+            if (system is T typedSystem) return typedSystem;
         }
         return null;
     }
-    
 
-
+    public bool TryGetSystem<T>(out T system) where T : class, IGameSystem
+    {
+        foreach (var s in _systems)
+        {
+            if (s is T typedSystem)
+            {
+                system = typedSystem;
+                return true;
+            }
+        }
+        system = null;
+        return false;
+    }
 }

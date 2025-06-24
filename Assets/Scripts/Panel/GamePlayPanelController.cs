@@ -4,10 +4,12 @@ using UnityEngine;
 using GameEvents;
 using System;
 using DG.Tweening;
+using UnityEngine.UI;
 
 // Handles panel show/hide transitions
 public class GamePlayPanelController : MonoBehaviour, IPanel
 {
+    [SerializeField] Button undo;
     [Header("Transition Settings")]
     [SerializeField] private float fadeDuration = 0.3f;
     [SerializeField] private float scaleDuration = 0.2f;
@@ -20,26 +22,23 @@ public class GamePlayPanelController : MonoBehaviour, IPanel
         _canvasGroup = GetComponent<CanvasGroup>();
         if (_canvasGroup == null)
             _canvasGroup = gameObject.AddComponent<CanvasGroup>();
-            
-        _originalScale = transform.localScale;
-        InitializePanelState();
-    }
 
-    private void InitializePanelState()
+        _originalScale = transform.localScale;
+        undo.onClick.AddListener(Undoclicked);
+    }
+    void Undoclicked()
     {
-        _canvasGroup.alpha = 0;
-        transform.localScale = _originalScale * 0.9f;
-        gameObject.SetActive(false);
+        Debug.Log("Undoclicked");
     }
 
     public async Task ShowAsync(object transitionData)
     {
         gameObject.SetActive(true);
-        
+
         var sequence = DOTween.Sequence()
             .Append(_canvasGroup.DOFade(1, fadeDuration))
             .Join(transform.DOScale(_originalScale, scaleDuration).SetEase(Ease.OutBack));
-        
+
         await sequence.AsyncWaitForCompletion();
     }
 

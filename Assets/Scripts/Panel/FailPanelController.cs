@@ -29,12 +29,8 @@ public class FailPanelController : MonoBehaviour, IPanel
         // Initialize components
         if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
         _originalScale = panelContent.localScale;
-        
-        // Set initial state
-        canvasGroup.alpha = 0;
-        panelContent.localScale = Vector3.zero;
-        gameObject.SetActive(false);
-        
+
+
         // Setup button listeners
         restartButton.onClick.AddListener(OnRestartClicked);
         menuButton.onClick.AddListener(OnMenuClicked);
@@ -43,16 +39,16 @@ public class FailPanelController : MonoBehaviour, IPanel
     public async Task ShowAsync(object transitionData)
     {
         gameObject.SetActive(true);
-        
+
         // Set fail reason text if provided
         if (transitionData is string reason && !string.IsNullOrEmpty(reason))
         {
             failReasonText.text = reason;
         }
-        
+
         // Reset animation if already playing
         _currentAnimation?.Kill();
-        
+
         // Create show animation sequence
         _currentAnimation = DOTween.Sequence()
             .Append(canvasGroup.DOFade(1, fadeInDuration))
@@ -65,7 +61,7 @@ public class FailPanelController : MonoBehaviour, IPanel
         PlayButtonAppearAnimation(restartButton.transform);
         await Task.Delay(100);
         PlayButtonAppearAnimation(menuButton.transform);
-        
+
         await _currentAnimation.AsyncWaitForCompletion();
     }
 
@@ -73,28 +69,29 @@ public class FailPanelController : MonoBehaviour, IPanel
     {
         // Reset animation if already playing
         _currentAnimation?.Kill();
-        
+
         // Create hide animation
         _currentAnimation = DOTween.Sequence()
             .Append(canvasGroup.DOFade(0, fadeInDuration * 0.7f))
             .Join(panelContent.DOScale(Vector3.zero, scaleInDuration * 0.5f).SetEase(Ease.InBack))
-            .OnComplete(() => {
+            .OnComplete(() =>
+            {
                 gameObject.SetActive(false);
                 _currentAnimation = null;
             });
-        
+
         await _currentAnimation.AsyncWaitForCompletion();
     }
 
     private void OnRestartClicked()
     {
-        EventBus.PublishSync(new LevelRestartRequestedEvent());
+        EventBus.PublishAuto(new LevelRestartRequestedEvent());
         PlayButtonClickFeedback(restartButton.transform);
     }
 
     private void OnMenuClicked()
     {
-        EventBus.PublishSync(new MenuRequestedEvent());
+        EventBus.PublishAuto(new MenuRequestedEvent());
         PlayButtonClickFeedback(menuButton.transform);
     }
 
@@ -119,5 +116,6 @@ public class FailPanelController : MonoBehaviour, IPanel
         menuButton.onClick.RemoveAllListeners();
         _currentAnimation?.Kill();
     }
+
 }
 

@@ -90,6 +90,7 @@ public class Tile : MonoBehaviour
 
     public async Task HandleSelection()
     {
+        Debug.Log("tile selection handiling");
         if (!CanSelectable) return;
 
         selectionState = SelectionState.Selected;
@@ -103,7 +104,7 @@ public class Tile : MonoBehaviour
             .SetEase(Ease.OutQuad);
 
         await selectSequence.AsyncWaitForCompletion();
-        await EventBus.PublishAsync(new TileSelectionEvent(this));
+        await EventBus.PublishAuto(new TileSelectionEvent(this));
         
         selectionState = SelectionState.Highlighted;
     }

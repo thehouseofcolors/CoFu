@@ -1,10 +1,6 @@
-
-
-
 namespace GameEvents
 {
     #region GameFlow
-
     public enum GameFailType
     {
         TimeOver,
@@ -14,8 +10,9 @@ namespace GameEvents
 
     public enum GamePauseType
     {
-        UserPause,    // oyuncunun isteğiyle pause
-        ShowAd        // reklam gösterimi vs.
+        UserPause,
+        ShowAd,
+        DueToFail
     }
 
 
@@ -30,6 +27,7 @@ namespace GameEvents
             FailReason = reason;
         }
     }
+
 
     public readonly struct GameLoadEvent : IGameEvent
     {

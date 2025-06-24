@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -73,7 +74,124 @@ public static class EventBus
         }
     }
 
-    public static async Task PublishAsync<T>(T gameEvent) where T : IGameEvent
+    // public static async Task PublishAsync<T>(T gameEvent) where T : IGameEvent
+    // {
+    //     if (gameEvent == null) throw new ArgumentNullException(nameof(gameEvent));
+
+    //     Subscription[] subscriptionsCopy;
+    //     lock (_lock)
+    //     {
+    //         if (!_subscribers.TryGetValue(typeof(T), out var subscriptions))
+    //             return;
+
+    //         subscriptionsCopy = subscriptions.ToArray();
+    //     }
+
+    //     foreach (var subscription in subscriptionsCopy)
+    //     {
+    //         try
+    //         {
+    //             await subscription.Handle(gameEvent);
+    //         }
+    //         catch (Exception ex)
+    //         {
+    //             Debug.LogError($"[EventBus] async handler error: {ex}");
+    //         }
+    //     }
+    // }
+
+
+    // {
+    //     if (gameEvent == null) throw new ArgumentNullException(nameof(gameEvent));
+
+    //     Subscription[] subscriptionsCopy;
+    //     lock (_lock)
+    //     {
+    //         if (!_subscribers.TryGetValue(typeof(T), out var subscriptions))
+    //             return;
+
+    //         subscriptionsCopy = subscriptions.ToArray();
+    //     }
+
+    //     foreach (var subscription in subscriptionsCopy)
+    //     {
+    //         try
+    //         {
+    //             subscription.Handle(gameEvent).GetAwaiter().GetResult(); // sync olarak çalıştır
+    //         }
+    //         catch (Exception ex)
+    //         {
+    //             Debug.LogError($"[EventBus] sync handler error: {ex}");
+    //         }
+    //     }
+    // }
+    // public static void PublishSync<T>(T gameEvent) where T : IGameEvent
+    // {
+    //     if (gameEvent == null) throw new ArgumentNullException(nameof(gameEvent));
+
+    //     Subscription[] subscriptionsCopy;
+    //     lock (_lock)
+    //     {
+    //         if (!_subscribers.TryGetValue(typeof(T), out var subscriptions))
+    //             return;
+
+    //         subscriptionsCopy = subscriptions.ToArray();
+    //     }
+
+    //     foreach (var subscription in subscriptionsCopy)
+    //     {
+    //         try
+    //         {
+    //             if (subscription is SyncSubscription<T> syncSub)
+    //             {
+    //                 syncSub.Handle(gameEvent).GetAwaiter().GetResult();
+    //             }
+    //             else
+    //             {
+    //                 Debug.LogWarning($"[EventBus] PublishSync: Skipping async subscription of type {subscription.GetType().Name}");
+    //             }
+    //         }
+    //         catch (Exception ex)
+    //         {
+    //             Debug.LogError($"[EventBus] sync handler error: {ex}");
+    //         }
+    //     }
+    // }
+    // public static void PublishSync<T>(T gameEvent) where T : IGameEvent
+    // {
+    //     if (gameEvent == null) throw new ArgumentNullException(nameof(gameEvent));
+
+    //     Subscription[] subscriptionsCopy;
+    //     lock (_lock)
+    //     {
+    //         if (!_subscribers.TryGetValue(typeof(T), out var subscriptions))
+    //             return;
+
+    //         subscriptionsCopy = subscriptions.ToArray();
+    //     }
+
+    //     foreach (var subscription in subscriptionsCopy)
+    //     {
+    //         if (subscription is SyncSubscription<T> syncSub)
+    //         {
+    //             try
+    //             {
+    //                 // Bu zaten sync, Task.CompletedTask döndüğü için güvenli
+    //                 syncSub.Handle(gameEvent).GetAwaiter().GetResult();
+    //             }
+    //             catch (Exception ex)
+    //             {
+    //                 Debug.LogError($"[EventBus] sync handler error: {ex}");
+    //             }
+    //         }
+    //         else
+    //         {
+    //             // Async subscription'lar PublishSync'te çalıştırılmaz, uyarı ver
+    //             Debug.LogWarning($"[EventBus] PublishSync: Skipping async subscription of type {subscription.GetType().Name}");
+    //         }
+    //     }
+    // }
+    public static Task PublishAuto<T>(T gameEvent) where T : IGameEvent
     {
         if (gameEvent == null) throw new ArgumentNullException(nameof(gameEvent));
 
@@ -81,48 +199,51 @@ public static class EventBus
         lock (_lock)
         {
             if (!_subscribers.TryGetValue(typeof(T), out var subscriptions))
-                return;
+                return Task.CompletedTask;
 
             subscriptionsCopy = subscriptions.ToArray();
         }
 
-        foreach (var subscription in subscriptionsCopy)
+        // async ve sync subscription'ları ayıralım
+        var syncList = new List<SyncSubscription<T>>();
+        var asyncList = new List<Subscription<T>>();
+
+        foreach (var sub in subscriptionsCopy)
+        {
+            if (sub is SyncSubscription<T> sync)
+                syncList.Add(sync);
+            else if (sub is Subscription<T> asyncSub)
+                asyncList.Add(asyncSub);
+        }
+
+        // Önce senkronları çalıştır
+        foreach (var sync in syncList)
         {
             try
             {
-                await subscription.Handle(gameEvent);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[EventBus] async handler error: {ex}");
-            }
-        }
-    }
-
-    public static void PublishSync<T>(T gameEvent) where T : IGameEvent
-    {
-        if (gameEvent == null) throw new ArgumentNullException(nameof(gameEvent));
-
-        Subscription[] subscriptionsCopy;
-        lock (_lock)
-        {
-            if (!_subscribers.TryGetValue(typeof(T), out var subscriptions))
-                return;
-
-            subscriptionsCopy = subscriptions.ToArray();
-        }
-
-        foreach (var subscription in subscriptionsCopy)
-        {
-            try
-            {
-                subscription.Handle(gameEvent).GetAwaiter().GetResult(); // sync olarak çalıştır
+                sync.Handle(gameEvent).GetAwaiter().GetResult(); // hızlı çalışır
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[EventBus] sync handler error: {ex}");
             }
         }
+
+        // Async'leri sırayla çalıştır, hepsi tamamlanana kadar bekle
+        var tasks = asyncList.Select(sub =>
+        {
+            try
+            {
+                return sub.Handle(gameEvent);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[EventBus] async handler error (start): {ex}");
+                return Task.CompletedTask;
+            }
+        }).ToArray();
+
+        return Task.WhenAll(tasks); // çağıran await edebilir ya da boş geçebilir
     }
 
     public static void Clear()

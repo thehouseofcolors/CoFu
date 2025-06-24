@@ -1,14 +1,8 @@
 using System.Threading.Tasks;
 using UnityEngine;
 using GameEvents;
-using System.Collections.Generic;
-using System.Linq;
-
 using System;
 
-
-
-#region State Implementations
 
 public class MenuState : IGameState
 {
@@ -16,15 +10,10 @@ public class MenuState : IGameState
     {
         Debug.Log("[State] Entering Menu");
 
-        await EventBus.PublishAsync(new ScreenChangeEvent(ScreenType.Menu));
-
-        // Menüde bir sonraki levelı preload et (opsiyonel, GameFlowController zaten yapıyor)
-        // await LevelManager.Instance.PreloadLevelAsync(PlayerPrefsService.CurrentLevel);
+        await EventBus.PublishAuto(new ScreenChangeEvent(ScreenType.Menu));
     }
-
     public Task ExitAsync() => Task.CompletedTask;
 }
-
 
 public class GamePlayState : IGameState
 {
@@ -45,10 +34,10 @@ public class GamePlayState : IGameState
             Debug.Log($"LevelConfig level is {_levelConfig.level}");
         }
 
-        await EventBus.PublishAsync(new ScreenChangeEvent(ScreenType.Game));
-        await EventBus.PublishAsync(new GameLoadEvent(_levelConfig));
-        // await EventBus.PublishAsync(new AudioEvent(AudioType.Music, "game_music", true));
+        await EventBus.PublishAuto(new ScreenChangeEvent(ScreenType.Game));
+        await EventBus.PublishAuto(new GameLoadEvent(_levelConfig));
 
+        //müzik başlat
         GameTimer.Instance.StartTimer(_levelConfig.timeLimit);
 
         // Subscribe to game end conditions
@@ -60,7 +49,7 @@ public class GamePlayState : IGameState
     {
         _gameEndSubscription?.Dispose();
         GameTimer.Instance.StopTimer();
-        // await EventBus.PublishAsync(new AudioEvent(AudioType.SFX, "level_exit"));
+        // müzik durdur
         await Task.CompletedTask;
     }
     private async void OnGameEndCondition(GameEndConditionMetEvent e)
@@ -81,11 +70,15 @@ public class GamePlayState : IGameState
 public class GamePauseState : IGameState
 {
     public GamePauseType gamePauseType;
+    public GamePauseState(GamePauseType gamePauseType)
+    {
+        this.gamePauseType = gamePauseType;
+    }
     public async Task EnterAsync()
     {
         Debug.Log("[State] Game Paused");
         GameTimer.Instance.Pause();
-        await EventBus.PublishAsync(new GamePauseEvent(gamePauseType));
+        await EventBus.PublishAuto(new GamePauseEvent(gamePauseType));
     }
 
     public async Task ExitAsync()
@@ -101,21 +94,21 @@ public class GameWinState : IGameState
     public async Task EnterAsync()
     {
         Debug.Log("[State] Level Completed!");
-
-        GameTimer.Instance.StopTimer();
         PlayerPrefsService.IncrementLevel();
 
-        await EventBus.PublishAsync(new GameWinEvent());
-        await EventBus.PublishAsync(new ScreenChangeEvent(ScreenType.Win));
-        // await EventBus.PublishAsync(new AudioEvent(AudioType.SFX, "level_win"));
+        await EventBus.PublishAuto(new GameWinEvent());
+        await EventBus.PublishAuto(new ScreenChangeEvent(ScreenType.Win));
+        //müzük ve animasyon efect vs ekle
 
-        // Auto-proceed to next level after delay
         await Task.Delay(2000);
-
-        // await GameStateMachine.ChangeStateAsync(new GamePlayState(LevelManager.GetNextLevelConfig()));//bunu button ile yapcam
     }
 
-    public Task ExitAsync() => Task.CompletedTask;
+    public async Task ExitAsync()
+    {
+        //müzikdurdur, animasyon durdur
+        await Task.CompletedTask;
+
+    }
 }
 public class GameFailState : IGameState
 {
@@ -126,8 +119,7 @@ public class GameFailState : IGameState
     public async Task EnterAsync()
     {
         Debug.Log($"[State] Level Failed: {_reason}");
-
-        // await EventBus.PublishAsync(new GameFailEvent(_reason));
+        //müzik animasyon effect ve ekle
 
         ScreenType screenType = _reason switch
         {
@@ -136,25 +128,14 @@ public class GameFailState : IGameState
             _ => ScreenType.Menu
         };
 
-        await EventBus.PublishAsync(new ScreenChangeEvent(screenType));
+        await EventBus.PublishAuto(new ScreenChangeEvent(screenType));
+        await EventBus.PublishAuto(new GameFailEvent(_reason));
     }
 
-    public Task ExitAsync() => Task.CompletedTask;
+    public Task ExitAsync() => Task.CompletedTask;//müzik ve ekliyse durdur
 }
 
 
-#endregion
 
-#region State Helpers
-
-public static class GameStateHelper
-{
-
-    
-    public static async Task ReturnToMenu() => 
-        await GameStateMachine.ChangeStateAsync(new MenuState());
-}
-
-#endregion
 
 

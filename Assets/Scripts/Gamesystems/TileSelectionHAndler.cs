@@ -74,7 +74,7 @@ public class TileSelectionHandler : MonoBehaviour, IGameSystem
         
         try
         {
-            await EventBus.PublishAsync(new TileFuseEvent(firstTile, secondTile));
+            await EventBus.PublishAuto(new TileFuseEvent(firstTile, secondTile));
         }
         finally
         {

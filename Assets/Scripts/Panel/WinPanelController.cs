@@ -27,10 +27,6 @@ public class WinPanelController : MonoBehaviour, IPanel
         if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
         _originalScale = contentTransform.localScale;
         
-        // Set initial state
-        canvasGroup.alpha = 0;
-        contentTransform.localScale = Vector3.zero;
-        gameObject.SetActive(false);
         
         // Setup button listeners
         nextButton.onClick.AddListener(OnNextButtonClicked);
@@ -72,13 +68,13 @@ public class WinPanelController : MonoBehaviour, IPanel
 
     private void OnNextButtonClicked()
     {
-        EventBus.PublishSync(new NextLevelRequestedEvent());
+        EventBus.PublishAuto(new NextLevelRequestedEvent());
         PlayButtonClickFeedback(nextButton.transform);
     }
 
     private void OnMenuButtonClicked()
     {
-        EventBus.PublishSync(new MenuRequestedEvent());
+        EventBus.PublishAuto(new MenuRequestedEvent());
         PlayButtonClickFeedback(menuButton.transform);
     }
 

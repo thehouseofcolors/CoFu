@@ -56,7 +56,7 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
     {
         PlayerPrefsService.RemainingMoves -= 1;
         await e.Source.TransferColorTo(e.Target);
-        await EventBus.PublishAsync(new UpdateMoveCountUIEvent(PlayerPrefsService.RemainingMoves));
+        await EventBus.PublishAuto(new UpdateMoveCountUIEvent(PlayerPrefsService.RemainingMoves));
         await Task.CompletedTask;
     }
 

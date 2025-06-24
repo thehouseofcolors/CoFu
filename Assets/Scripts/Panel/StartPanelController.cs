@@ -33,10 +33,6 @@ public class StartPanelController : MonoBehaviour, IPanel
         if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
         _originalScale = panelContent.localScale;
 
-        // Set initial state
-        canvasGroup.alpha = 0;
-        panelContent.localScale = Vector3.zero;
-        gameObject.SetActive(false);
 
         // Setup button listener
         startButton.onClick.AddListener(OnStartClicked);
@@ -44,6 +40,7 @@ public class StartPanelController : MonoBehaviour, IPanel
         // Subscribe to level updates
         _levelUpdateSub = EventBus.Subscribe<LevelInfoUpdateEvent>(OnLevelInfoUpdated);
 
+        Debug.Log("butona tıklayabilirsin");
     }
 
     public async Task ShowAsync(object transitionData)
@@ -85,12 +82,19 @@ public class StartPanelController : MonoBehaviour, IPanel
 
         await sequence.AsyncWaitForCompletion();
     }
-
-    private void OnStartClicked()
+    private async void OnStartClicked()
     {
         Debug.Log("start clicked");
-        EventBus.PublishSync(new GameStartRequestedEvent());
+        await EventBus.PublishAuto(new GameStartRequestedEvent());
         PlayButtonClickFeedback(startButton.transform);
+    }
+
+
+    private void PlayButtonClickFeedback(Transform buttonTransform)
+    {
+        buttonTransform.DOKill();
+        buttonTransform.DOPunchScale(Vector3.one * 0.15f, 0.3f, 2, 0.5f)
+            .OnComplete(() => buttonTransform.localScale = Vector3.one);
     }
 
     private void OnLevelInfoUpdated(LevelInfoUpdateEvent evt)
@@ -104,13 +108,6 @@ public class StartPanelController : MonoBehaviour, IPanel
             .Append(startButton.transform.DOScale(Vector3.one * (1 + buttonPulseAmount), buttonPulseDuration / 2).SetEase(Ease.InOutSine))
             .Append(startButton.transform.DOScale(Vector3.one, buttonPulseDuration / 2).SetEase(Ease.InOutSine))
             .SetLoops(-1, LoopType.Restart);
-    }
-
-    private void PlayButtonClickFeedback(Transform buttonTransform)
-    {
-        buttonTransform.DOKill();
-        buttonTransform.DOPunchScale(Vector3.one * 0.15f, 0.3f, 2, 0.5f)
-            .OnComplete(() => buttonTransform.localScale = Vector3.one);
     }
 
     private void StopAllAnimations()
