@@ -6,52 +6,41 @@ using System;
 using DG.Tweening;
 using UnityEngine.UI;
 
-// Handles panel show/hide transitions
-public class GamePlayPanelController : MonoBehaviour, IPanel
+
+public class GamePlayPanelController : BasePanelController
 {
-    [SerializeField] Button undo;
-    [Header("Transition Settings")]
-    [SerializeField] private float fadeDuration = 0.3f;
-    [SerializeField] private float scaleDuration = 0.2f;
-    
-    private CanvasGroup _canvasGroup;
-    private Vector3 _originalScale;
+    [Header("Gameplay Specifics")]
+    [SerializeField] private Button undoButton;
 
-    private void Awake()
+    protected override void Awake()
     {
-        _canvasGroup = GetComponent<CanvasGroup>();
-        if (_canvasGroup == null)
-            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
-
-        _originalScale = transform.localScale;
-        undo.onClick.AddListener(Undoclicked);
-    }
-    void Undoclicked()
-    {
-        Debug.Log("Undoclicked");
+        base.Awake();
+        SafeAddButtonListener(undoButton, OnUndoClicked);
     }
 
-    public async Task ShowAsync(object transitionData)
+    public override async Task ShowAsync(object transitionData = null)
     {
-        gameObject.SetActive(true);
+        if (canvasGroup == null || panelContent == null)
+        {
+            Debug.LogWarning("ShowAsync failed: canvasGroup or panelContent is null.");
+            return;
+        }
+        gameObject.SetActive(true); // animasyondan önce
 
-        var sequence = DOTween.Sequence()
-            .Append(_canvasGroup.DOFade(1, fadeDuration))
-            .Join(transform.DOScale(_originalScale, scaleDuration).SetEase(Ease.OutBack));
+        // Simpler show animation for gameplay HUD
+        _currentAnimation = DOTween.Sequence()
+            .Append(canvasGroup.DOFade(1, fadeDuration))
+            .Join(panelContent.DOScale(_originalScale, scaleDuration).SetEase(showEase));
 
-        await sequence.AsyncWaitForCompletion();
+        await _currentAnimation.AsyncWaitForCompletion();
+        
+        Debug.Log("play panel show");
     }
 
-    public async Task HideAsync()
+    private void OnUndoClicked()
     {
-        var sequence = DOTween.Sequence()
-            .Append(_canvasGroup.DOFade(0, fadeDuration))
-            .Join(transform.DOScale(_originalScale * 0.9f, scaleDuration).SetEase(Ease.InBack))
-            .OnComplete(() => gameObject.SetActive(false));
-            
-        await sequence.AsyncWaitForCompletion();
+        Debug.Log("Undo clicked");
+        // Add undo functionality here
     }
 }
-
-
 

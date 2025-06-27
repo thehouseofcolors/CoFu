@@ -8,7 +8,17 @@ using GameEvents;
 using System.Linq;
 using System.Threading;
 
-
+#region enum
+    public enum ScreenType { Menu, Game, Loading, Win, Fail, Pause_TimeOver, Pause_NoMoves }
+public enum GamePauseType
+{
+    TimeOver,
+    NoMoves,
+    UserPause,
+    ShowAd,
+    DueToFail
+}
+#endregion
 #region  Interfaces
 
 public interface IGameEvent { }

@@ -43,8 +43,6 @@ public class GamePlayState : IGameState
         
         TileInputHandler.Instance.EnableInput();
 
-        // Subscribe to game end conditions
-        _gameEndSubscription = EventBus.Subscribe<GameEndConditionMetEvent>(OnGameEndCondition);
         
     }
 
@@ -57,17 +55,7 @@ public class GamePlayState : IGameState
         // müzik durdur
         await Task.CompletedTask;
     }
-    private async void OnGameEndCondition(GameEndConditionMetEvent e)
-    {
-        if (e.IsWin)
-        {
-            await GameStateMachine.ChangeStateAsync(new GameWinState());
-        }
-        else
-        {
-            await GameStateMachine.ChangeStateAsync(new GameFailState(e.FailReason));
-        }
-    }
+
 
    
 }
@@ -117,24 +105,15 @@ public class GameWinState : IGameState
 }
 public class GameFailState : IGameState
 {
-    private readonly GameFailType _reason;
-
-    public GameFailState(GameFailType reason) => _reason = reason;
 
     public async Task EnterAsync()
     {
-        Debug.Log($"[State] Level Failed: {_reason}");
+        Debug.Log($"[State] Level Failed");
         //müzik animasyon effect ve ekle
 
-        ScreenType screenType = _reason switch
-        {
-            GameFailType.TimeOver => ScreenType.Fail_TimeOver,
-            GameFailType.NoMoves => ScreenType.Fail_NoMoves,
-            _ => ScreenType.Menu
-        };
 
-        await EventBus.PublishAuto(new ScreenChangeEvent(screenType));
-        await EventBus.PublishAuto(new GameFailEvent(_reason));
+        await EventBus.PublishAuto(new ScreenChangeEvent());
+        await EventBus.PublishAuto(new GameFailEvent());
     }
 
     public Task ExitAsync() => Task.CompletedTask;//müzik ve ekliyse durdur

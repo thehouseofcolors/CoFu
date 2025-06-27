@@ -13,6 +13,8 @@ public class PanelManager : MonoBehaviour, IGameSystem
     [SerializeField] private GameObject winPanel;
     [SerializeField] private GameObject fail;
 
+    [SerializeField] private GameObject pause;
+
     [Header("Settings")]
     [SerializeField] private float minLoadingTime = 2f; // Minimum loading screen duration
     [SerializeField] private float panelTransitionDelay = 3f;
@@ -45,11 +47,11 @@ public class PanelManager : MonoBehaviour, IGameSystem
             await loadingPanelInterface.ShowAsync(null);  // Animasyon varsa çalıştır
         }
 
-        Debug.Log("Initial loading panel shown");
+        // Debug.Log("Initial loading panel shown");
 
-        await Task.Delay((int)(minLoadingTime * 1000));
+        // await Task.Delay((int)(minLoadingTime * 1000));
 
-        Debug.Log("Going to menu");
+        // Debug.Log("Going to menu");
 
         await GameStateMachine.SetInitialStateAsync(new MenuState());
     }
@@ -69,8 +71,9 @@ public class PanelManager : MonoBehaviour, IGameSystem
             {ScreenType.Menu, menuPanel},
             {ScreenType.Game, gamePanel},
             {ScreenType.Win, winPanel},
-            {ScreenType.Fail_NoMoves, fail},
-            {ScreenType.Fail_TimeOver, fail}
+            {ScreenType.Fail, fail},
+            { ScreenType.Pause_NoMoves, pause},
+            {ScreenType.Pause_TimeOver, pause}
         };
 
         // Initialize all panels
@@ -111,7 +114,7 @@ public class PanelManager : MonoBehaviour, IGameSystem
 
     public async Task ShowPanelAsync(ScreenType screenType, object transitionData = null)
     {
-        
+
         Debug.Log($"[PanelManager] ShowPanelAsync called for {screenType}");
         if (!_panelDictionary.TryGetValue(screenType, out var newPanel))
         {
@@ -129,7 +132,7 @@ public class PanelManager : MonoBehaviour, IGameSystem
         if (newPanel == _currentPanel)
         {
             Debug.Log($"[PanelManager] {screenType} already active. Forcing ShowAsync again.");
-            
+
             var currentPanelInterface = _currentPanel.GetComponent<IPanel>();
             if (currentPanelInterface != null)
             {
@@ -159,6 +162,7 @@ public class PanelManager : MonoBehaviour, IGameSystem
         var newPanelInterface = newPanel.GetComponent<IPanel>();
         if (newPanelInterface != null)
         {
+            
             await newPanelInterface.ShowAsync(transitionData);
         }
         else
@@ -186,3 +190,5 @@ public class PanelManager : MonoBehaviour, IGameSystem
     }
 
 }
+
+

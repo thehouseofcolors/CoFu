@@ -1,34 +1,6 @@
 namespace GameEvents
 {
     #region GameFlow
-    public enum GameFailType
-    {
-        TimeOver,
-        NoMoves,
-        Other
-    }
-
-    public enum GamePauseType
-    {
-        UserPause,
-        ShowAd,
-        DueToFail
-    }
-
-
-    public readonly struct GameEndConditionMetEvent : IGameEvent
-    {
-        public readonly bool IsWin;
-        public readonly GameFailType FailReason;
-
-        public GameEndConditionMetEvent(bool isWin, GameFailType reason = default)
-        {
-            IsWin = isWin;
-            FailReason = reason;
-        }
-    }
-
-
     public readonly struct GameLoadEvent : IGameEvent
     {
         public readonly LevelConfig Level;
@@ -37,11 +9,8 @@ namespace GameEvents
 
     public readonly struct GameWinEvent : IGameEvent { }
 
-    public readonly struct GameFailEvent : IGameEvent
-    {
-        public readonly GameFailType Reason;
-        public GameFailEvent(GameFailType reason) => Reason = reason;
-    }
+    public readonly struct GameFailEvent : IGameEvent { }
+
 
     public readonly struct GamePauseEvent : IGameEvent
     {
@@ -54,7 +23,7 @@ namespace GameEvents
     #endregion
 
     #region UIEvents
-    public enum ScreenType { Menu, Game, Loading, Win, Fail_TimeOver, Fail_NoMoves }
+
 
     public readonly struct ScreenChangeEvent : IGameEvent
     {
@@ -118,6 +87,7 @@ namespace GameEvents
         public UpdateMoveCountUIEvent(int count) => MoveCount = count;
     }
     #endregion
+
 
 }
 

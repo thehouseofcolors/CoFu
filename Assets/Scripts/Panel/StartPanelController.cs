@@ -6,95 +6,52 @@ using DG.Tweening;
 using TMPro;
 using System;
 
-public class StartPanelController : MonoBehaviour, IPanel
+
+public class StartPanelController : BasePanelController
 {
-    [Header("References")]
+    [Header("Start Panel Specifics")]
     [SerializeField] private Button startButton;
     [SerializeField] private TextMeshProUGUI levelText;
-    [SerializeField] private CanvasGroup canvasGroup;
-    [SerializeField] private RectTransform panelContent;
     [SerializeField] private TextMeshProUGUI levelTitleText;
-
-    [Header("Animation Settings")]
-    [SerializeField] private float fadeDuration = 0.5f;
-    [SerializeField] private float scaleDuration = 0.7f;
     [SerializeField] private float buttonPulseAmount = 0.1f;
     [SerializeField] private float buttonPulseDuration = 1f;
-    [SerializeField] private Ease scaleEase = Ease.OutBack;
-    [SerializeField] private float titleBounceDelay = 0.3f;
 
-    private Vector3 _originalScale;
     private Sequence _pulseSequence;
     private IDisposable _levelUpdateSub;
 
-    private void Awake()
+    protected override void Awake()
     {
-        // Initialize components
-        if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
-        _originalScale = panelContent.localScale;
-
-
-        // Setup button listener
-        startButton.onClick.AddListener(OnStartClicked);
-
-        // Subscribe to level updates
+        base.Awake();
+        
+        SafeAddButtonListener(startButton, OnStartClicked);
         _levelUpdateSub = EventBus.Subscribe<LevelInfoUpdateEvent>(OnLevelInfoUpdated);
-
-        Debug.Log("butona tıklayabilirsin");
     }
 
-    public async Task ShowAsync(object transitionData)
+    public override async Task ShowAsync(object transitionData = null)
     {
-        gameObject.SetActive(true);
-
-        // Reset animation if already playing
-        StopAllAnimations();
-
-        // Create show animation sequence
-        var sequence = DOTween.Sequence()
-            .Append(canvasGroup.DOFade(1, fadeDuration))
-            .Join(panelContent.DOScale(_originalScale, scaleDuration).SetEase(scaleEase));
-
-        // Animate level title with delay
+        await base.ShowAsync(transitionData);
+        StartButtonPulseAnimation();
+        
         if (levelTitleText != null)
         {
             levelTitleText.transform.localScale = Vector3.zero;
-            sequence.Insert(titleBounceDelay,
-                levelTitleText.transform.DOScale(Vector3.one, scaleDuration * 0.7f)
-                    .SetEase(Ease.OutBack));
+            levelTitleText.transform.DOScale(Vector3.one, scaleDuration * 0.7f)
+                .SetEase(showEase)
+                .SetDelay(buttonAppearDelay * 2f);
         }
-
-        await sequence.AsyncWaitForCompletion();
-
-        // Start button pulse animation
-        StartButtonPulseAnimation();
     }
 
-    public async Task HideAsync()
+    protected override void OnDestroy()
     {
-        StopAllAnimations();
-
-        // Create hide animation
-        var sequence = DOTween.Sequence()
-            .Append(canvasGroup.DOFade(0, fadeDuration * 0.7f))
-            .Join(panelContent.DOScale(Vector3.zero, scaleDuration * 0.5f).SetEase(Ease.InBack))
-            .OnComplete(() => gameObject.SetActive(false));
-
-        await sequence.AsyncWaitForCompletion();
-    }
-    private async void OnStartClicked()
-    {
-        Debug.Log("start clicked");
-        await EventBus.PublishAuto(new GameStartRequestedEvent());
-        PlayButtonClickFeedback(startButton.transform);
+        base.OnDestroy();
+        _levelUpdateSub?.Dispose();
+        _pulseSequence?.Kill();
     }
 
-
-    private void PlayButtonClickFeedback(Transform buttonTransform)
+    private void OnStartClicked()
     {
-        buttonTransform.DOKill();
-        buttonTransform.DOPunchScale(Vector3.one * 0.15f, 0.3f, 2, 0.5f)
-            .OnComplete(() => buttonTransform.localScale = Vector3.one);
+        _pulseSequence?.Kill();
+        EventBus.PublishAuto(new GameStartRequestedEvent());
     }
 
     private void OnLevelInfoUpdated(LevelInfoUpdateEvent evt)
@@ -105,29 +62,9 @@ public class StartPanelController : MonoBehaviour, IPanel
     private void StartButtonPulseAnimation()
     {
         _pulseSequence = DOTween.Sequence()
-            .Append(startButton.transform.DOScale(Vector3.one * (1 + buttonPulseAmount), buttonPulseDuration / 2).SetEase(Ease.InOutSine))
-            .Append(startButton.transform.DOScale(Vector3.one, buttonPulseDuration / 2).SetEase(Ease.InOutSine))
-            .SetLoops(-1, LoopType.Restart);
+            .Append(startButton.transform.DOScale(Vector3.one * (1 + buttonPulseAmount), buttonPulseDuration/2))
+            .Append(startButton.transform.DOScale(Vector3.one, buttonPulseDuration/2))
+            .SetLoops(-1);
     }
-
-    private void StopAllAnimations()
-    {
-        _pulseSequence?.Kill();
-        canvasGroup.DOKill();
-        panelContent.DOKill();
-        if (levelTitleText != null) levelTitleText.transform.DOKill();
-        startButton.transform.DOKill();
-    }
-
-    private void OnDestroy()
-    {
-        // Clean up
-        startButton.onClick.RemoveAllListeners();
-        _levelUpdateSub?.Dispose();
-        StopAllAnimations();
-    }
-    
-
 }
-
 

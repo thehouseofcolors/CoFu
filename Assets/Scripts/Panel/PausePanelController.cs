@@ -3,9 +3,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using GameEvents;
 using DG.Tweening;
+using TMPro;
 
 
-public class WinPanelController : BasePanelController
+public class PausePanelController : BasePanelController
 {
     [Header("Pause Panel Specific References")]
     [SerializeField] private Button extraTimeButton;
