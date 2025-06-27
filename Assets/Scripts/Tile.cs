@@ -3,6 +3,9 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using UnityEditor.U2D.Aseprite;
+using System;
+using GameEvents;
 
 [RequireComponent(typeof(SpriteRenderer), typeof(TileEffectController))]
 public class Tile : MonoBehaviour
@@ -69,11 +72,31 @@ public class Tile : MonoBehaviour
     {
         tileEffectController.SetHighlight(on);
     }
-    public async Task TileSelected()
+
+    private bool CanBeClicked()
     {
-        await tileEffectController.PlaySelectedEffect(spriteRenderer);
+        // Add your conditions here
+        bool canClick = CanSelectable;
+        Debug.Log($"CanBeClicked: {canClick}");
+        return canClick;
     }
 
 
-}
+    public async Task OnClicked()
+    {
+        Debug.Log("tile cliicked");
+        if (!CanBeClicked()) return;
+        
+        try 
+        {
+            CanSelectable = false; // Prevent double clicks
+            await tileEffectController.PlaySelectedEffect(spriteRenderer);
+            await EventBus.PublishAuto(new TileSelectionEvent(this));
+        }
+        finally
+        {
+            CanSelectable = true;
+        }
+    }
 
+}

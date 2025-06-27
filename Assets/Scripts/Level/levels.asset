@@ -19,11 +19,11 @@ MonoBehaviour:
     targetWhiteTiles: 3
     timeLimit: 20
     moveLimit: 3
-    seed: 3102420
+    seed: 2410510
   - level: 2
     tiles_in_a_row: 2
     tiles_in_a_column: 2
     targetWhiteTiles: 2
     timeLimit: 20
     moveLimit: 20
-    seed: 24010
+    seed: 50211

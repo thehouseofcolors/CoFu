@@ -6,7 +6,7 @@ public class GameCore : MonoBehaviour
 {
     private HashSet<IGameSystem> _systems;
 
-    private void Awake()
+    private void Start()
     {
         _systems = new HashSet<IGameSystem>(GetComponents<IGameSystem>());
         foreach (var system in _systems)

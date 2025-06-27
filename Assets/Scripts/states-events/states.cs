@@ -10,6 +10,7 @@ public class MenuState : IGameState
     {
         Debug.Log("[State] Entering Menu");
 
+        TileInputHandler.Instance.DisableInput();
         await EventBus.PublishAuto(new ScreenChangeEvent(ScreenType.Menu));
     }
     public Task ExitAsync() => Task.CompletedTask;
@@ -39,6 +40,8 @@ public class GamePlayState : IGameState
 
         //müzik başlat
         GameTimer.Instance.StartTimer(_levelConfig.timeLimit);
+        
+        TileInputHandler.Instance.EnableInput();
 
         // Subscribe to game end conditions
         _gameEndSubscription = EventBus.Subscribe<GameEndConditionMetEvent>(OnGameEndCondition);
@@ -49,6 +52,8 @@ public class GamePlayState : IGameState
     {
         _gameEndSubscription?.Dispose();
         GameTimer.Instance.StopTimer();
+
+        TileInputHandler.Instance.DisableInput();
         // müzik durdur
         await Task.CompletedTask;
     }
