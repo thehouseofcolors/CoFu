@@ -64,15 +64,15 @@ namespace GameEvents
     #region Gameplay
     public readonly struct TileSelectionEvent : IGameEvent
     {
-        public readonly Tile Tile;
-        public TileSelectionEvent(Tile tile) => Tile = tile;
+        public readonly IColorSource colorSource;
+        public TileSelectionEvent(IColorSource colorSource) => this.colorSource = colorSource;
     }
 
     public readonly struct TileFuseEvent : IGameEvent
     {
-        public readonly Tile Source;
-        public readonly Tile Target;
-        public TileFuseEvent(Tile source, Tile target) => (Source, Target) = (source, target);
+        public readonly IColorSource Source;
+        public readonly IColorSource Target;
+        public TileFuseEvent(IColorSource source, IColorSource target) => (Source, Target) = (source, target);
     }
 
     public readonly struct UpdateTimerUIEvent : IGameEvent

@@ -46,12 +46,10 @@ using UnityEngine.UI;
 
 public class EffectManager : MonoBehaviour
 {
-    [SerializeField] private GameObject colorEffectPrefab;   // Renk topu efekti prefabı
-                                                             // [SerializeField] private GameObject mergeEffectPrefab;   // Birleşme efekti prefabı (isteğe bağlı)
-
-    [SerializeField] private GameObject whiteEffectPrefab;   // Birleşme efekti prefabı (isteğe bağlı)
+    [SerializeField] private GameObject worldcolorEffectPrefab;
+    [SerializeField] private GameObject UIEffectPrefab;
     [SerializeField] private RectTransform uiCanvas;
-    [SerializeField] public RectTransform scoreTarget;
+    
 
     private const float moveDuration = 0.5f;
     private const float mergeDuration = 0.3f;
@@ -60,7 +58,7 @@ public class EffectManager : MonoBehaviour
     // Tek bir renk efektini spawn edip baştan sona hareket ettirir
     public async Task SpawnAndMoveColorEffect(ColorVector color, Vector3 startPos)
     {
-        var effectGO = Instantiate(colorEffectPrefab, startPos, Quaternion.identity);
+        var effectGO = Instantiate(worldcolorEffectPrefab, startPos, Quaternion.identity);
         var sr = effectGO.GetComponent<SpriteRenderer>();
         sr.color = color.ToUnityColor();
         sr.sortingOrder = 10;
@@ -70,30 +68,30 @@ public class EffectManager : MonoBehaviour
         // Efekt burada kalabilir veya yok edilebilir
         Destroy(effectGO);
     }
-
-
-    public async Task MoveEffectToTile(ColorVector color, Vector3 tilePos)
+    public async Task ReverseSpawnAndMoveColorEffect(ColorVector color, Vector3 startPos)
     {
-        var effectGO = Instantiate(colorEffectPrefab, Vector3.zero, Quaternion.identity);
+        Vector3 endPos = Vector3.zero;
+        var effectGO = Instantiate(worldcolorEffectPrefab, endPos, Quaternion.identity);
         var sr = effectGO.GetComponent<SpriteRenderer>();
         sr.color = color.ToUnityColor();
         sr.sortingOrder = 10;
+        await effectGO.transform.DOMove(startPos, moveDuration).SetEase(Ease.InOutSine).AsyncWaitForCompletion();
 
-        await effectGO.transform.DOMove(tilePos, finalMoveDuration).SetEase(Ease.OutBack).AsyncWaitForCompletion();
-
+        // Efekt burada kalabilir veya yok edilebilir
         Destroy(effectGO);
     }
 
-    public async Task MoveWhiteEffectToUI(Vector2 uiScreenPos)
+
+    public async Task MoveEffectToUI(ColorVector color, Vector2 uiScreenPos)
     {
-        Debug.Log("white on the UI");
-        var effectGO = Instantiate(whiteEffectPrefab, uiCanvas); 
+        var effectGO = Instantiate(UIEffectPrefab, uiCanvas); 
         var rt = effectGO.GetComponent<RectTransform>();
+        var img = effectGO.GetComponentInChildren<Image>();
+        img.color = color.ToUnityColor();
 
         rt.anchoredPosition = Vector2.zero;
 
-        // UI pozisyonunu Animate ederken DOAnchorPos kullan
-        await rt.DOAnchorPos(uiScreenPos, finalMoveDuration).SetEase(Ease.InBack).AsyncWaitForCompletion();
+        await rt.DOMove(uiScreenPos, finalMoveDuration).SetEase(Ease.OutBack).AsyncWaitForCompletion();
 
         Destroy(effectGO);
     }

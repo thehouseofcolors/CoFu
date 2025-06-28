@@ -6,6 +6,7 @@ using GameEvents;
 using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
 using System;
+using DG.Tweening;
 
 
 // public class FusionProcessor : MonoBehaviour, IGameSystem
@@ -106,6 +107,10 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
     [Header("Dependencies")]
     [SerializeField] private EffectManager effectManager;
     [SerializeField] private CameraShaker cameraShaker;
+
+    [SerializeField] public RectTransform whiteTarget;
+
+    [SerializeField] public RectTransform intermediateTarget;
     
     [Header("Settings")]
     [SerializeField] private float fusionDuration = 0.5f;
@@ -148,10 +153,10 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         }
     }
 
-    private async Task ProcessFusion(Tile source, Tile target)
+    private async Task ProcessFusion(IColorSource source, IColorSource target)
     {
         // Validate colors
-        if (source.IsEmpty || target.IsEmpty)
+        if (source.IsEmpty() || target.IsEmpty())
         {
             await HandleInvalidFusion();
             return;
@@ -170,29 +175,118 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         await ExecuteFusion(source, target, fusionResult);
     }
 
-    private async Task ExecuteFusion(Tile source, Tile target, ColorVector resultColor)
+    // private async Task ExecuteFusion(IColorSource source, IColorSource target, ColorVector resultColor)
+    // {
+    //     // Calculate merge position between the two tiles
+    //     var mergePosition = (source.GetPosition() + target.GetPosition()) * 0.5f;
+    //     ColorVector sourceColor = source.GetColor();
+    //     ColorVector targetColor = target.GetColor();
+    //     // Animate both colors moving to merge position
+    //     await AnimateColorMerge(sourceColor, targetColor, source.GetPosition(), target.GetPosition());
+
+
+    //     // Handle the fusion result
+    //     if (resultColor.IsWhite)
+    //     {
+    //         await effectManager.MoveEffectToUI(resultColor, whiteTarget.anchoredPosition);
+    //     }
+    //     else
+    //     {
+    //         Vector2 targetPos;
+    //         Vector2? slotPos = IntermediateSlotManager.Instance.GetSlotPosition();
+    //         if (slotPos.HasValue)
+    //         {
+    //             targetPos = slotPos.Value;
+                
+    //             await effectManager.MoveEffectToUI(resultColor, targetPos);
+    //             // Örneğin: efekti oraya taşı
+    //             Debug.Log($"Slot pozisyonu bulundu: {targetPos}");
+    //         }
+    //         else
+    //         {
+    //             Debug.Log("Boş slot yok!");
+    //         }
+
+    //     }
+        
+    //     // Update game state
+    //     PlayerPrefsService.RemainingMoves--;
+    //     await EventBus.PublishAuto(new UpdateMoveCountUIEvent(PlayerPrefsService.RemainingMoves));
+    // }
+
+    private async Task ExecuteFusion(IColorSource source, IColorSource target, ColorVector resultColor)
     {
-        // Calculate merge position between the two tiles
-        var mergePosition = (source.transform.position + target.transform.position) * 0.5f;
-        ColorVector sourceColor = source.PopTopColor();
-        ColorVector targetColor = target.PopTopColor();
-        // Animate both colors moving to merge position
-        await AnimateColorMerge(sourceColor, targetColor, source.transform.position, target.transform.position);
+        var sourcePos = source.GetPosition();
+        var targetPos = target.GetPosition();
+        var mergePosition = (sourcePos + targetPos) * 0.5f;
 
+        ColorVector sourceColor = source.GetColor();
+        ColorVector targetColor = target.GetColor();
 
-        // Handle the fusion result
+        // 1. Animasyonu oyna
+        await AnimateColorMerge(sourceColor, targetColor, sourcePos, targetPos);
+
+        // 2. Beyazsa beyaz hedefe gönder
         if (resultColor.IsWhite)
         {
-            await HandleWhiteFusion(effectManager.scoreTarget.position, mergePosition);
+
+            await effectManager.MoveEffectToUI(resultColor, whiteTarget.anchoredPosition);
         }
         else
         {
-            await HandleRegularFusion(target, resultColor, mergePosition);
+            SlotController slot = IntermediateSlotManager.Instance.GetSlot();
+            if (slot != null)
+            {
+                Vector2 slotPos = slot.GetComponent<RectTransform>().position;
+                await effectManager.MoveEffectToUI(resultColor, slotPos);
+                slot.SetColor(resultColor);
+            }
+            else
+            {
+                await AnimateColorReturn(sourceColor, targetColor, sourcePos, targetPos);
+
+                //     // Renkleri stack'e geri pushla
+                //     // source.PushColor(sourceColor);
+                //     // target.PushColor(targetColor);
+
+                return; // ⛔ Fusion işlemi tamamlanmaz
+
+            }
+            // Vector2? slotPos = IntermediateSlotManager.Instance.GetSlotPosition();
+            // if (slotPos.HasValue)
+            // {
+            //     var targetSlotPos = slotPos.Value;
+
+                //     await effectManager.MoveEffectToUI(resultColor, targetSlotPos);
+                //     Debug.Log($"Slot pozisyonu bulundu: {targetSlotPos}");
+                // }
+                // else
+                // {
+                //     Debug.Log("Boş slot yok! Geriye alma başlatılıyor...");
+
+                //     // 🔁 Ters efekt: renkleri geri gönder
+                //     await AnimateColorReturn(sourceColor, targetColor, sourcePos, targetPos);
+
+                //     // Renkleri stack'e geri pushla
+                //     // source.PushColor(sourceColor);
+                //     // target.PushColor(targetColor);
+
+                //     return; // ⛔ Fusion işlemi tamamlanmaz
+                // }
         }
-        
-        // Update game state
+
+        // 3. State update
         PlayerPrefsService.RemainingMoves--;
         await EventBus.PublishAuto(new UpdateMoveCountUIEvent(PlayerPrefsService.RemainingMoves));
+    }
+    private async Task AnimateColorReturn(ColorVector sourceColor, ColorVector targetColor, Vector3 sourcePos, Vector3 targetPos)
+    {
+       
+        var moveSourceTask = effectManager.ReverseSpawnAndMoveColorEffect(sourceColor, sourcePos);
+        var moveTargetTask = effectManager.ReverseSpawnAndMoveColorEffect(targetColor, targetPos);
+        await Task.WhenAll(moveSourceTask, moveTargetTask);
+
+
     }
 
     private async Task AnimateColorMerge(ColorVector sourceColor, ColorVector targetColor, Vector3 sourcePos, Vector3 targetPos)
@@ -202,17 +296,6 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         await Task.WhenAll(moveSourceTask, moveTargetTask);
     }
 
-    private async Task HandleRegularFusion(Tile target, ColorVector color, Vector3 mergePosition)
-    {
-        await effectManager.MoveEffectToTile(color, target.transform.position);
-        target.PushColor(color);
-    }
-
-    private async Task HandleWhiteFusion(Vector3 targetpos, Vector3 mergePosition)
-    {
-        await Task.Delay(TimeSpan.FromSeconds(whiteScoreDelay));
-        await effectManager.MoveWhiteEffectToUI( targetpos);
-    }
 
     private async Task HandleInvalidFusion()
     {

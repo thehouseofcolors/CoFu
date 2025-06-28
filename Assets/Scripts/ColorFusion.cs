@@ -20,6 +20,15 @@ public enum PauseType
 #endregion
 #region  Interfaces
 
+public interface IColorSource
+{
+    void SetHighlight(bool on);
+    ColorVector GetColor();
+    ColorVector PeekColor();
+    Vector3 GetPosition();
+    bool IsEmpty();
+}
+
 public interface IGameEvent { }
 
 public interface IGameSystem

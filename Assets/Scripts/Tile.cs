@@ -8,7 +8,7 @@ using System;
 using GameEvents;
 
 [RequireComponent(typeof(SpriteRenderer), typeof(TileEffectController))]
-public class Tile : MonoBehaviour
+public class Tile : MonoBehaviour, IColorSource
 {
     // Serialized Fields
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -16,7 +16,7 @@ public class Tile : MonoBehaviour
 
     // Properties
     private Stack<ColorVector> colorStack = new Stack<ColorVector>();
-    public bool IsEmpty => colorStack.Count == 0;
+    public bool IsEmpty() => colorStack.Count == 0;
     public bool CanSelectable { get; set; }
     public int X { get; private set; }
     public int Y { get; private set; }
@@ -37,13 +37,17 @@ public class Tile : MonoBehaviour
         Y = y;
     }
 
-    public ColorVector PopTopColor()
+    public ColorVector GetColor()
     {
-        if (IsEmpty) return ColorVector.Null;
+        if (IsEmpty()) return ColorVector.Null;
         var color = colorStack.Pop();
         tileEffectController.PlayPopAnimation();
         UpdateVisual();
         return color;
+    }
+    public Vector3 GetPosition()
+    {
+        return transform.position;
     }
 
     public void PushColor(ColorVector color)
@@ -55,7 +59,7 @@ public class Tile : MonoBehaviour
 
     public ColorVector PeekColor()
     {
-        if (IsEmpty)
+        if (IsEmpty())
         {
             Debug.LogWarning("Attempted to peek empty tile");
             return ColorVector.Null;
@@ -65,7 +69,7 @@ public class Tile : MonoBehaviour
     public void UpdateVisual()
     {
         if (spriteRenderer == null) return;
-        spriteRenderer.color = IsEmpty ? Color.clear : PeekColor().ToUnityColor();
+        spriteRenderer.color = IsEmpty() ? Color.clear : PeekColor().ToUnityColor();
     }
 
     public void SetHighlight(bool on)
@@ -83,14 +87,14 @@ public class Tile : MonoBehaviour
 
     public async void ReverseStack()
     {
-        if (IsEmpty) return;
+        if (IsEmpty()) return;
 
         List<ColorVector> tempList = new List<ColorVector>();
 
         // Tüm renkleri tek tek Pop (ve animasyon oynat)
-        while (!IsEmpty)
+        while (!IsEmpty())
         {
-            var color = PopTopColor(); // Animasyon içeriyor zaten
+            var color = GetColor(); // Animasyon içeriyor zaten
             tempList.Add(color);
             await Task.Delay(100); // pop animasyonu süresi kadar bekle (opsiyonel ayarla)
         }

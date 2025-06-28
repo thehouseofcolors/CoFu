@@ -11,8 +11,8 @@ public class TileSelectionHandler : MonoBehaviour, IGameSystem
     [SerializeField] private float selectionCooldown = 0.3f;
 
     // Private State
-    private Tile _firstTile;
-    private Tile _secondTile;
+    private IColorSource _firstTile;
+    private IColorSource _secondTile;
     private SelectionState _currentState = SelectionState.None;
     private bool _isInCooldown;
     private readonly List<IDisposable> _disposables = new List<IDisposable>();
@@ -54,48 +54,18 @@ public class TileSelectionHandler : MonoBehaviour, IGameSystem
         if (ShouldIgnoreSelection(e))
             return;
 
-        await ProcessTileSelection(e.Tile);
+        await ProcessTileSelection(e.colorSource);
     }
 
     private bool ShouldIgnoreSelection(TileSelectionEvent e)
     {
         return _isInCooldown ||
-               e.Tile == null ||
+               e.colorSource == null ||
                _currentState == SelectionState.Processing;
     }
 
-    // private async Task ProcessTileSelection(Tile selectedTile)
-    // {
-    //     _isInCooldown = true;
 
-    //     try
-    //     {
-    //         switch (_currentState)
-    //         {
-    //             case SelectionState.None:
-    //                 HandleFirstSelection(selectedTile);
-    //                 break;
-
-    //             case SelectionState.FirstSelected:
-    //                 await HandleSecondSelection(selectedTile);
-    //                 break;
-    //         }
-    //     }
-    //     finally
-    //     {
-    //         await Task.Delay(TimeSpan.FromSeconds(selectionCooldown));
-    //         _isInCooldown = false;
-    //     }
-    // }
-
-    // private void HandleFirstSelection(Tile tile)
-    // {
-    //     _firstTile = tile;
-    //     _firstTile.SetHighlight(true);
-    //     _currentState = SelectionState.FirstSelected;
-    // }
-
-    private async Task HandleSecondSelection(Tile tile)
+    private async Task HandleSecondSelection(IColorSource tile)
     {
         _secondTile = tile;
         _secondTile.SetHighlight(true);
@@ -123,7 +93,7 @@ public class TileSelectionHandler : MonoBehaviour, IGameSystem
         _currentState = SelectionState.None;
     }
 
-    private void ResetTile(ref Tile tile)
+    private void ResetTile(ref IColorSource tile)
     {
         if (tile != null)
         {
@@ -132,7 +102,7 @@ public class TileSelectionHandler : MonoBehaviour, IGameSystem
         }
     }
     
-    private async Task ProcessTileSelection(Tile selectedTile)
+    private async Task ProcessTileSelection(IColorSource selectedTile)
     {
         if (_isInCooldown) return;
         _isInCooldown = true;
@@ -162,7 +132,7 @@ public class TileSelectionHandler : MonoBehaviour, IGameSystem
         }
     }
 
-    private async Task HandleFirstSelection(Tile tile)
+    private async Task HandleFirstSelection(IColorSource tile)
     {
         _firstTile = tile;
         _firstTile.SetHighlight(true);

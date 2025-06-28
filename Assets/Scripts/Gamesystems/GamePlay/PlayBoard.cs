@@ -115,7 +115,7 @@ public class PlayBoardManager : MonoBehaviour, IGameSystem
             bool allTilesEmpty = true;
             foreach (var tile in _allTiles)
             {
-                if (!tile.IsEmpty)
+                if (!tile.IsEmpty())
                 {
                     allTilesEmpty = false;
                     break; // Exit early if we find a non-empty tile

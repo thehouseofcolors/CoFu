@@ -26,7 +26,7 @@ public class GamePlayPanelController : BasePanelController
             return;
         }
         gameObject.SetActive(true); // animasyondan önce
-
+        canvasGroup.alpha = 0;
         // Simpler show animation for gameplay HUD
         _currentAnimation = DOTween.Sequence()
             .Append(canvasGroup.DOFade(1, fadeDuration))
