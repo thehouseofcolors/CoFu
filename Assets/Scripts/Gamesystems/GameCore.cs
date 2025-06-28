@@ -8,6 +8,7 @@ public class GameCore : MonoBehaviour
 
     private void Start()
     {
+        PlayerPrefs.DeleteAll();
         _systems = new HashSet<IGameSystem>(GetComponents<IGameSystem>());
         foreach (var system in _systems)
         {

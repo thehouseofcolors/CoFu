@@ -25,7 +25,6 @@ public class GamePlayState : IGameState
 
     public async Task EnterAsync()
     {
-        Debug.Log($"[State] Starting Level {_levelConfig.level}");
         if (_levelConfig == null)
         {
             Debug.LogError("LevelConfig is NULL in GamePlayState!");
@@ -62,8 +61,8 @@ public class GamePlayState : IGameState
 
 public class GamePauseState : IGameState
 {
-    public GamePauseType gamePauseType;
-    public GamePauseState(GamePauseType gamePauseType)
+    public PauseType gamePauseType;
+    public GamePauseState(PauseType gamePauseType)
     {
         this.gamePauseType = gamePauseType;
     }
@@ -72,6 +71,7 @@ public class GamePauseState : IGameState
         Debug.Log("[State] Game Paused");
         GameTimer.Instance.Pause();
         await EventBus.PublishAuto(new GamePauseEvent(gamePauseType));
+        
     }
 
     public async Task ExitAsync()
@@ -82,6 +82,7 @@ public class GamePauseState : IGameState
     }
 }
 
+
 public class GameWinState : IGameState
 {
     public async Task EnterAsync()
@@ -90,7 +91,8 @@ public class GameWinState : IGameState
         PlayerPrefsService.IncrementLevel();
 
         await EventBus.PublishAuto(new GameWinEvent());
-        await EventBus.PublishAuto(new ScreenChangeEvent(ScreenType.Win));
+        // await EventBus.PublishAuto(new ScreenChangeEvent(ScreenType.Win));
+        await EventBus.PublishAuto(new LayOverChangeEvent(LayOverType.Win));
         //müzük ve animasyon efect vs ekle
 
         await Task.Delay(2000);

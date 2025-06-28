@@ -29,6 +29,8 @@ public class GameFlowController : MonoBehaviour, IGameSystem
     private async Task OnGameStart(GameStartRequestedEvent e)
     {
         Debug.Log("gamerequest dinlendl ve gamastate değiştirilecek");
+        Debug.Log($"current level {PlayerPrefsService.CurrentLevel}");
+        Debug.Log($"level = {collection.GetLevelConfig(PlayerPrefsService.CurrentLevel)}");
         await GameStateMachine.ChangeStateAsync(new GamePlayState(collection.GetLevelConfig(PlayerPrefsService.CurrentLevel)));
 
     }

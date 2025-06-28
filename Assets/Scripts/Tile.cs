@@ -81,13 +81,35 @@ public class Tile : MonoBehaviour
         return canClick;
     }
 
+    public async void ReverseStack()
+    {
+        if (IsEmpty) return;
+
+        List<ColorVector> tempList = new List<ColorVector>();
+
+        // Tüm renkleri tek tek Pop (ve animasyon oynat)
+        while (!IsEmpty)
+        {
+            var color = PopTopColor(); // Animasyon içeriyor zaten
+            tempList.Add(color);
+            await Task.Delay(100); // pop animasyonu süresi kadar bekle (opsiyonel ayarla)
+        }
+
+        // Tersten geri Push (yani stack'i terslemiş olursun)
+        for (int i = 0; i < tempList.Count; i++)
+        {
+            PushColor(tempList[i]); // Push animasyonu da var
+            await Task.Delay(100); // push animasyonu süresi kadar bekle (opsiyonel ayarla)
+        }
+    }
+
 
     public async Task OnClicked()
     {
         Debug.Log("tile cliicked");
         if (!CanBeClicked()) return;
-        
-        try 
+
+        try
         {
             CanSelectable = false; // Prevent double clicks
             await tileEffectController.PlaySelectedEffect(spriteRenderer);

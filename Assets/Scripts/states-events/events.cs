@@ -14,8 +14,8 @@ namespace GameEvents
 
     public readonly struct GamePauseEvent : IGameEvent
     {
-        public readonly GamePauseType Reason;
-        public GamePauseEvent(GamePauseType reason) => Reason = reason;
+        public readonly PauseType Reason;
+        public GamePauseEvent(PauseType reason) => Reason = reason;
     }
 
     public readonly struct GameResumeEvent : IGameEvent { }
@@ -36,18 +36,18 @@ namespace GameEvents
             TransitionData = data;
         }
     }
-
-    public readonly struct PanelShownEvent : IGameEvent
+    public readonly struct LayOverChangeEvent : IGameEvent
     {
-        public readonly ScreenType ScreenType;
+        public readonly LayOverType Screen;
         public readonly object TransitionData;
 
-        public PanelShownEvent(ScreenType screenType, object transitionData)
+        public LayOverChangeEvent(LayOverType screen, object data = null)
         {
-            ScreenType = screenType;
-            TransitionData = transitionData;
+            Screen = screen;
+            TransitionData = data;
         }
     }
+
 
     public readonly struct NextLevelRequestedEvent : IGameEvent { }
     public readonly struct MenuRequestedEvent : IGameEvent { }
@@ -88,6 +88,29 @@ namespace GameEvents
     }
     #endregion
 
+    #region requests-ad
 
+    public readonly struct ExtraUndoReguestedEvent : IGameEvent
+    {
+
+    }
+    public readonly struct ExtraTimeRequestedEvent : IGameEvent
+    {
+
+    }
+    public readonly struct ExtraMovesRequestedEvent : IGameEvent
+    {
+
+    }
+    public readonly struct ExrtaReverseTileRequestedEvent : IGameEvent
+    {
+
+    }
+    public readonly struct ExtraSlotRequestedEvent : IGameEvent
+    {
+
+    }
+    #endregion
+    
 }
 

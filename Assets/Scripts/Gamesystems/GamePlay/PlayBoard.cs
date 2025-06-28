@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using GameEvents;
 using System;
+using System.Linq;
 
 public class PlayBoardManager : MonoBehaviour, IGameSystem
 {
@@ -30,6 +31,7 @@ public class PlayBoardManager : MonoBehaviour, IGameSystem
         _eventSubscriptions.Add(EventBus.Subscribe<GameLoadEvent>(OnLevelLoad));
         _eventSubscriptions.Add(EventBus.Subscribe<GamePauseEvent>(OnGamePause));
         _eventSubscriptions.Add(EventBus.Subscribe<GameResumeEvent>(OnGameResume));
+        _eventSubscriptions.Add(EventBus.Subscribe<TileFuseEvent>(OnTileFuse));
     }
 
     private void UnsubscribeEvents()
@@ -96,6 +98,52 @@ public class PlayBoardManager : MonoBehaviour, IGameSystem
     private async Task OnLevelLoad(GameLoadEvent e)
     {
         await SetupGrid(e.Level);
+    }
+    // async Task OnTileFuse(TileFuseEvent e)
+    // {
+    //     bool allEmpty = _allTiles.All(t => t.IsEmpty);
+    //     if (allEmpty)
+    //     {
+    //         await EventBus.PublishAuto(new GameWinEvent());
+    //     }
+    // }
+    private async Task OnTileFuse(TileFuseEvent e)
+    {
+        try
+        {
+            // Check if all tiles are empty
+            bool allTilesEmpty = true;
+            foreach (var tile in _allTiles)
+            {
+                if (!tile.IsEmpty)
+                {
+                    allTilesEmpty = false;
+                    break; // Exit early if we find a non-empty tile
+                }
+            }
+
+            if (allTilesEmpty)
+            {
+                // Add a small delay for better game feel
+                await Task.Delay(100);
+
+                // Publish win event with error handling
+                try
+                {
+                    // await EventBus.PublishAuto(new GameWinEvent());
+                    await GameStateMachine.ChangeStateAsync(new GameWinState());
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"Failed to publish GameWinEvent: {ex}");
+                    // Consider adding fallback win handling here
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error in OnTileFuse: {ex}");
+        }
     }
 
     private async Task OnGameWin()

@@ -9,14 +9,13 @@ using System.Linq;
 using System.Threading;
 
 #region enum
-    public enum ScreenType { Menu, Game, Loading, Win, Fail, Pause_TimeOver, Pause_NoMoves }
-public enum GamePauseType
+public enum ScreenType { Menu, Game, Loading, Win, Fail, Pause_TimeOver, Pause_NoMoves }
+public enum LayOverType { Win, Fail, Pause_TimeOver, Pause_NoMoves, None}
+public enum PauseType
 {
     TimeOver,
     NoMoves,
-    UserPause,
-    ShowAd,
-    DueToFail
+    ShowAd
 }
 #endregion
 #region  Interfaces
@@ -30,14 +29,19 @@ public interface IGameSystem
 }
 public interface IGameState
 {
-    Task EnterAsync();   // Duruma girerken async işlemler olabilir
-    Task ExitAsync();    // Durumdan çıkarken async işlemler
+    Task EnterAsync();
+    Task ExitAsync();
 }
 
-public interface IPanel 
+public interface IPanel
 {
     Task ShowAsync(object transitionData);
     Task HideAsync();
+}
+public interface ILayOver
+{
+    Task ShowLayOverAsync(object transitionData);
+    Task HideCurrentLayOverAsync();
 }
 
 
