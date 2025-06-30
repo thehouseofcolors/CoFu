@@ -11,6 +11,7 @@ public class TileEffectController : MonoBehaviour
     [SerializeField] private float pushScale = 0.8f;
     [SerializeField] private float popScale = 1.2f;
 
+
     public void SetHighlight(bool on)
     {
         transform.DOKill(); // Kill any ongoing animations

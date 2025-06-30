@@ -1,16 +1,52 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using GameEvents;
 using UnityEngine;
 
-public class GameTimer : Singleton<GameTimer>
+public class GameTimer : Singleton<GameTimer>, IGameSystem
 {
     private float _remainingTime;
     private bool _isRunning;
     private bool _isPaused;
     private CancellationTokenSource _cts;
+    
+    private List<IDisposable> _eventSubscriptions = new List<IDisposable>();
 
+
+    public void Initialize()
+    {  
+        SubscribeEvents();
+    }
+    public void Shutdown()
+    {
+        UnsubscribeEvents();
+    }
+    private void SubscribeEvents()
+    {
+        _eventSubscriptions.Add(EventBus.Subscribe<GameStartEvent>(HandleGameStart));
+        _eventSubscriptions.Add(EventBus.Subscribe<GamePauseEvent>(HandleGamePause));
+        _eventSubscriptions.Add(EventBus.Subscribe<GameResumeEvent>(HandleGameResume));
+        _eventSubscriptions.Add(EventBus.Subscribe<GameWinEvent>(HandleGameWin));
+    }
+    private void UnsubscribeEvents()
+    {
+        foreach (var subscription in _eventSubscriptions)
+        {
+            subscription?.Dispose();
+        }
+        _eventSubscriptions.Clear();
+    }
+
+    private void HandleGameStart(GameStartEvent e)
+    {
+        StartTimer(30);
+    }
+    private void HandleGameWin(GameWinEvent e) => StopTimer();
+    private void HandleGamePause(GamePauseEvent e) => Pause();
+
+    private void HandleGameResume(GameResumeEvent e) => Resume();
     public void Disable()
     {
         StopTimer();
@@ -85,7 +121,7 @@ public class GameTimer : Singleton<GameTimer>
 
             if (_remainingTime <= 0 && !token.IsCancellationRequested)
             {
-                // await GameStateHelper.FailDueToTime();
+                await GameStateMachine.ChangeStateAsync(new GamePauseState(PauseType.TimeOver));
             }
         }
         catch (OperationCanceledException)
@@ -95,6 +131,7 @@ public class GameTimer : Singleton<GameTimer>
         finally
         {
             _isRunning = false;
+            _isPaused = true;
         }
     }
 

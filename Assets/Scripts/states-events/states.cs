@@ -10,7 +10,7 @@ public class MenuState : IGameState
     {
         Debug.Log("[State] Entering Menu");
 
-        TileInputHandler.Instance.DisableInput();
+        // TileInputHandler.Instance.DisableInput();
         await EventBus.PublishAuto(new ScreenChangeEvent(ScreenType.Menu));
     }
     public Task ExitAsync() => Task.CompletedTask;
@@ -38,9 +38,7 @@ public class GamePlayState : IGameState
         await EventBus.PublishAuto(new GameLoadEvent(_levelConfig));
 
         //müzik başlat
-        GameTimer.Instance.StartTimer(_levelConfig.timeLimit);
         
-        TileInputHandler.Instance.EnableInput();
 
         
     }
@@ -50,7 +48,6 @@ public class GamePlayState : IGameState
         _gameEndSubscription?.Dispose();
         GameTimer.Instance.StopTimer();
 
-        TileInputHandler.Instance.DisableInput();
         // müzik durdur
         await Task.CompletedTask;
     }
@@ -70,7 +67,7 @@ public class GamePauseState : IGameState
     {
         Debug.Log("[State] Game Paused");
         GameTimer.Instance.Pause();
-        await EventBus.PublishAuto(new GamePauseEvent(gamePauseType));
+        await Task.CompletedTask;
         
     }
 
@@ -121,6 +118,47 @@ public class GameFailState : IGameState
     public Task ExitAsync() => Task.CompletedTask;//müzik ve ekliyse durdur
 }
 
+public class GameResumeState : IGameState
+{
+
+    private readonly LevelConfig _levelConfig;
+    private IDisposable _gameEndSubscription;
+
+    public GameResumeState(LevelConfig levelConfig) => _levelConfig = levelConfig;
+
+    public async Task EnterAsync()
+    {
+        if (_levelConfig == null)
+        {
+            Debug.LogError("LevelConfig is NULL in GamePlayState!");
+        }
+        else
+        {
+            Debug.Log($"LevelConfig level is {_levelConfig.level}");
+        }
+
+        await EventBus.PublishAuto(new ScreenChangeEvent(ScreenType.Game));
+        await EventBus.PublishAuto(new GameLoadEvent(_levelConfig));
+
+        //müzik başlat
+        GameTimer.Instance.StartTimer(_levelConfig.timeLimit);
+
+
+
+    }
+
+    public async Task ExitAsync()
+    {
+        _gameEndSubscription?.Dispose();
+        GameTimer.Instance.StopTimer();
+
+        
+        // müzik durdur
+        await Task.CompletedTask;
+    }
+
+
+}
 
 
 

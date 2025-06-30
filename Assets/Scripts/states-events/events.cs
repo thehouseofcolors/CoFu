@@ -6,7 +6,7 @@ namespace GameEvents
         public readonly LevelConfig Level;
         public GameLoadEvent(LevelConfig level) => Level = level;
     }
-
+    public readonly struct GameStartEvent:IGameEvent { }
     public readonly struct GameWinEvent : IGameEvent { }
 
     public readonly struct GameFailEvent : IGameEvent { }

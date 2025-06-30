@@ -20,13 +20,19 @@ public enum PauseType
 #endregion
 #region  Interfaces
 
+public interface IUndoAction
+{
+    Task UndoAsync();
+}
 public interface IColorSource
 {
     void SetHighlight(bool on);
-    ColorVector GetColor();
+    void SetTemporarilyDisabled(bool disabled);
+    ColorVector PopTopColor();
     ColorVector PeekColor();
     Vector3 GetPosition();
     bool IsEmpty();
+    bool IsUIBased();
 }
 
 public interface IGameEvent { }
@@ -229,48 +235,125 @@ public static class ColorPalette
 
 #region Grid-System
 
+// public static class PaintManager
+// {
+//     public static async Task PaintTiles(List<Tile> tiles, Stack<ColorVector> colors,
+//         CancellationToken cancellationToken = default)
+//     {
+//         if (tiles == null) throw new ArgumentNullException(nameof(tiles));
+//         if (colors == null) throw new ArgumentNullException(nameof(colors));
+
+//         while (colors.Count > 0 && !cancellationToken.IsCancellationRequested)
+//         {
+//             foreach (var tile in tiles)
+//             {
+//                 if (colors.Count == 0 || cancellationToken.IsCancellationRequested)
+//                     return;
+
+//                 var color = colors.Pop();
+
+//                 // Use MainThreadDispatcher if available, otherwise execute directly
+//                 if (MainThreadDispatcher.Instance)
+//                 {
+//                     // await MainThreadDispatcher.Instance.EnqueueAsync(() =>
+//                     // {
+//                     //     if (!cancellationToken.IsCancellationRequested)
+//                     //     {
+//                     //         tile.PushColor(color);
+//                     //         tile.UpdateVisual();
+//                     //     }
+//                     // }, cancellationToken);
+//                 }
+//                 else
+//                 {
+//                     // Fallback for when dispatcher isn't available
+//                     tile.PushColor(color);
+//                     tile.UpdateVisual();
+//                 }
+
+//                 await Task.Delay(300, cancellationToken).ConfigureAwait(true); // Force main thread continuation
+//             }
+//         }
+//     }
+// }
+
 public static class PaintManager
 {
-    public static async Task PaintTiles(List<Tile> tiles, Stack<ColorVector> colors,
+    public static async Task PaintTiles(
+        List<Tile> tiles, 
+        Stack<ColorVector> colors,
+        int delayBetweenStepsMs = 300,
         CancellationToken cancellationToken = default)
     {
+        // Validate parameters
         if (tiles == null) throw new ArgumentNullException(nameof(tiles));
         if (colors == null) throw new ArgumentNullException(nameof(colors));
+        if (delayBetweenStepsMs < 0) throw new ArgumentOutOfRangeException(nameof(delayBetweenStepsMs));
 
-        while (colors.Count > 0 && !cancellationToken.IsCancellationRequested)
+        try
         {
-            foreach (var tile in tiles)
+            // Process colors until none left or cancelled
+            while (colors.Count > 0 && !cancellationToken.IsCancellationRequested)
             {
-                if (colors.Count == 0 || cancellationToken.IsCancellationRequested)
-                    return;
-
-                var color = colors.Pop();
-
-                // Use MainThreadDispatcher if available, otherwise execute directly
-                if (MainThreadDispatcher.Instance)
+                foreach (var tile in tiles)
                 {
-                    await MainThreadDispatcher.Instance.EnqueueAsync(() =>
-                    {
-                        if (!cancellationToken.IsCancellationRequested)
-                        {
-                            tile.PushColor(color);
-                            tile.UpdateVisual();
-                        }
-                    }, cancellationToken);
-                }
-                else
-                {
-                    // Fallback for when dispatcher isn't available
-                    tile.PushColor(color);
-                    tile.UpdateVisual();
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (colors.Count == 0) break;
 
-                await Task.Delay(300, cancellationToken).ConfigureAwait(true); // Force main thread continuation
+                    var color = colors.Pop();
+                    await PaintTile(tile, color, delayBetweenStepsMs, cancellationToken);
+                }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.Log("Painting operation was cancelled");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Painting failed: {ex.Message}");
+            throw;
+        }
+    }
+
+    private static async Task PaintTile(
+        Tile tile, 
+        ColorVector color,
+        int delayMs,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Execute on main thread with cancellation support
+            await MainThreadDispatcher.EnqueueAsync(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                tile.PushColor(color);
+                tile.UpdateVisual();
+            }, cancellationToken);
+
+            // Add delay between paint operations if needed
+            if (delayMs > 0)
+            {
+                await Task.Delay(delayMs, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Return the color if operation was cancelled
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                await MainThreadDispatcher.EnqueueAsync(() =>
+                {
+                    tile.PopTopColor();
+                    tile.UpdateVisual();
+                });
+            }
+            throw;
         }
     }
 }
-
 
 public static class GridBuilder
 {
@@ -406,9 +489,12 @@ public static class Constants
     #endregion
 
     #region Game Session
-    public const string RemainingUndoKey = "Undo";
     public const string RemainingMovesKey = "Moves";
     public const string TimerStartKey = "Timer";
+    #endregion
+    #region  joker
+    public const string ReverseJokerKey = "Reverse";
+    public const string RemainingUndoKey = "Undo";
     #endregion
 
     #region Settings
@@ -449,11 +535,7 @@ public static class PlayerPrefsService
     #endregion
 
     #region Game Session
-    public static int RemainingUndo
-    {
-        get => PlayerPrefs.GetInt(Constants.RemainingUndoKey, 5);
-        set => PlayerPrefs.SetInt(Constants.RemainingUndoKey, Mathf.Max(0, value));
-    }
+
 
     public static int RemainingMoves
     {
@@ -468,6 +550,22 @@ public static class PlayerPrefsService
     }
     #endregion
 
+    #region  joker
+
+    public static int RemainingUndo
+    {
+        get => PlayerPrefs.GetInt(Constants.RemainingUndoKey, 5);
+        set => PlayerPrefs.SetInt(Constants.RemainingUndoKey, Mathf.Max(0, value));
+    }
+    
+    public static int RemainingReverse
+    {
+        get => PlayerPrefs.GetInt(Constants.ReverseJokerKey, 0);
+        set => PlayerPrefs.SetInt(Constants.ReverseJokerKey, Mathf.Max(0, value));
+    }
+
+
+    #endregion
     #region Settings
     public static bool IsSoundOn
     {
@@ -549,6 +647,7 @@ public static class PlayerPrefsService
         }
     }
     #endregion
+
 }
 #endregion
 
@@ -602,3 +701,5 @@ public static class TaskExtensions
 }
 
 #endregion
+
+

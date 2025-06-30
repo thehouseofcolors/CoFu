@@ -26,6 +26,7 @@ public class SlotController : MonoBehaviour, IColorSource
     private IntermediateSlotManager slotManager;
     private bool isInteractable = true;
     private Sequence highlightSequence;
+    public bool hasColor;
 
     private void Awake()
     {
@@ -90,7 +91,7 @@ public class SlotController : MonoBehaviour, IColorSource
         //     slotParticles.Play();
     }
 
-    public ColorVector GetColor()
+    public ColorVector PopTopColor()
     {
         if (IsEmpty()) return ColorVector.Null;
 
@@ -131,10 +132,26 @@ public class SlotController : MonoBehaviour, IColorSource
         highlightSequence?.Kill();
         transform.localScale = highlight ? Vector3.one * highlightScale : Vector3.one;
     }
+    public void SetTemporarilyDisabled(bool disabled)
+    {
+        if (disabled)
+            slotImage.color = Color.grey;
+        else
+            UpdateVisual(); // gerçek rengi tekrar uygular
+    }
 
     // IColorSource implementation
     public bool IsEmpty() => !storedColor.HasValue;
-    public Vector3 GetPosition() => transform.position;
+    public bool IsInteractable() => isInteractable;
+    public bool IsUIBased() => true;
+    public Vector3 GetPosition()
+    {
+        Vector2 uiPos = GetComponent<RectTransform>().position;
+        Vector3 worldPos = Camera.main.ScreenToWorldPoint(uiPos);
+        worldPos.z = 0;
+        Debug.Log($"ui {uiPos} to world {worldPos}");
+        return worldPos;
+    }
     public ColorVector PeekColor() => storedColor ?? ColorVector.Null;
 }
 

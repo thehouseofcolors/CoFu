@@ -167,3 +167,4 @@ MonoBehaviour:
   animationDuration: 0.15
   pushScale: 0.8
   popScale: 1.2
+  particleEffect: {fileID: 0}

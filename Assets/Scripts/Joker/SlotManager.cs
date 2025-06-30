@@ -111,6 +111,16 @@ public class IntermediateSlotManager : Singleton<IntermediateSlotManager>
     private int unlockedSlotCount = 1;
     private int maxSlotCount = 4;
 
+    public bool HasEmptySlot()
+    {
+        foreach (var slot in slotControllers)
+        {
+            if (slot.IsInteractable () && slot.hasColor) return false;
+
+        }
+        return true;
+    }
+
     private void Start()
     {
         for (int i = 0; i < slotControllers.Count; i++)
@@ -138,27 +148,14 @@ public class IntermediateSlotManager : Singleton<IntermediateSlotManager>
 
     private void RefreshSlotAvailability()
     {
-        for (int i = 0; i < slotControllers.Count; i++)
-        {
-            bool active = i < unlockedSlotCount;
-            slotControllers[i].gameObject.SetActive(active);
-        }
+        // for (int i = 0; i < slotControllers.Count; i++)
+        // {
+        //     bool active = i < unlockedSlotCount;
+        //     slotControllers[i].gameObject.SetActive(active);
+        // }
     }
-    public void AddColor(ColorVector color, SlotController slot)
-    {
-        slot.SetColor(color);
 
-    }
-    public Vector2? GetSlotPosition()
-    {
-        foreach (var slot in slotControllers)
-        {
-            if (slot.IsEmpty())
-                return slot.GetComponent<RectTransform>().position;
 
-        }
-        return null;
-    }
     public SlotController GetSlot()
     {
         foreach (var slot in slotControllers)

@@ -17,6 +17,7 @@ public class Tile : MonoBehaviour, IColorSource
     // Properties
     private Stack<ColorVector> colorStack = new Stack<ColorVector>();
     public bool IsEmpty() => colorStack.Count == 0;
+    public bool IsUIBased() => false;
     public bool CanSelectable { get; set; }
     public int X { get; private set; }
     public int Y { get; private set; }
@@ -37,7 +38,7 @@ public class Tile : MonoBehaviour, IColorSource
         Y = y;
     }
 
-    public ColorVector GetColor()
+    public ColorVector PopTopColor()
     {
         if (IsEmpty()) return ColorVector.Null;
         var color = colorStack.Pop();
@@ -76,6 +77,13 @@ public class Tile : MonoBehaviour, IColorSource
     {
         tileEffectController.SetHighlight(on);
     }
+    public void SetTemporarilyDisabled(bool disabled)
+    {
+        if (disabled)
+            spriteRenderer.color = Color.gray; // veya daha soft, yarı saydam bir renk
+        else
+            UpdateVisual(); // gerçek rengi tekrar uygular
+    }
 
     private bool CanBeClicked()
     {
@@ -94,7 +102,7 @@ public class Tile : MonoBehaviour, IColorSource
         // Tüm renkleri tek tek Pop (ve animasyon oynat)
         while (!IsEmpty())
         {
-            var color = GetColor(); // Animasyon içeriyor zaten
+            var color = PopTopColor(); // Animasyon içeriyor zaten
             tempList.Add(color);
             await Task.Delay(100); // pop animasyonu süresi kadar bekle (opsiyonel ayarla)
         }
