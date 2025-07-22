@@ -1,0 +1,8 @@
+| State       | Input  | Timer  | Panel | Devam          |
+| ----------- | ------ | ------ | ----- | -------------- |
+| Menu        | Kapalı | Kapalı | Menü  | Start          |
+| GameLoading | Kapalı | Kapalı | Game  | Oyun yüklensin |
+| GamePlay    | Açık   | Açık   | Game  | Win/Fail       |
+| GamePause   | Kapalı | Durdu  | Game  | Resume         |
+| GameWin     | Kapalı | Durdu  | Win   | Next level     |
+| GameFail    | Kapalı | Durdu  | Fail  | Retry          |

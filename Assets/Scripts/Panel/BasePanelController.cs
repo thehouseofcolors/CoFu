@@ -1,128 +1,150 @@
+/// <summary>
+///
+/// 📌 Sorumluluklar:
+/// - UI panellerinin temel görünme/gizlenme geçişlerini ve buton kurulumlarını yönetir.
+/// - `Awake()` sırasında veya `ShowAsync()` öncesinde güvenli şekilde `Setup()` çağrısı ile başlatılır.
+///
+/// 🧩 Etkileşimde Bulunduğu Sistemler:
+/// - Effects.PanelTransition (geçiş animasyonları)
+/// - Effects.Buttons (buton tıklama animasyonları)
+///
+/// 🧩 Uyguladığı Interface:
+/// - IPanel: ShowAsync(), HideAsync(), OnPause(), OnResume(), OnQuit()
+///
+/// 📡 Yayınladığı Eventler:
+/// - Yok
+///
+/// 📝 Notlar:
+/// - Tüm paneller bu sınıftan türemelidir.
+/// - `InitializeButtons()` ve `InitializeText()` override edilerek özelleştirilmelidir.
+/// - `ShowAsync()` paneli hazırlar ama geçiş animasyonu içermez. Gerekirse override edilmelidir.
+/// - `CancellationTokenSource` ile animasyon/işlemler gerektiğinde iptal edilebilir.
+/// 
+/// 
+/// ✅ Geliştirme Durumu: TAMAMLANMADI (Soyut temel panel sınıfı)
+/// </summary>
+
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
-using DG.Tweening;
 using System;
-
+using System.Threading;
+//bu her panele eklenen scriptin abstractı dolayısıyla awake vs lazım yada initializeı dışardan yapıcam ama gereksiz gibi 
 
 
 [RequireComponent(typeof(CanvasGroup))]
 public abstract class BasePanelController : MonoBehaviour, IPanel
 {
-    [Header("Base Panel Settings")]
-    [SerializeField] protected float fadeDuration = 0.3f;
-    [SerializeField] protected float scaleDuration = 0.5f;
-    [SerializeField] protected Ease showEase = Ease.OutBack;
-    [SerializeField] protected Ease hideEase = Ease.InBack;
-    [SerializeField] protected float contentScaleMultiplier = 1.1f;
-    [SerializeField] protected float buttonAppearDelay = 0.1f;
-    [SerializeField] protected float buttonClickFeedbackIntensity = 0.1f;
-    
-    [Header("Base Panel References")]
-    [SerializeField] protected RectTransform panelContent;
+
+    [Header("UI References")]
+    [SerializeField] protected RectTransform contentRoot;
     [SerializeField] protected CanvasGroup canvasGroup;
+    [SerializeField] PanelType panelType;
 
-    protected Vector3 _originalScale;
-    protected Sequence _currentAnimation;
-    protected bool _isInitialized;
+    protected Vector2 originalPosition;
+    protected bool isInitialized;
 
+    protected CancellationTokenSource _cts;
     protected virtual void Awake()
     {
-        InitializeComponents();
+        // Ensure initialization happens even if script is disabled
+        Setup();
+
     }
 
-    protected virtual void InitializeComponents()
-    {
-        if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
-        if (panelContent == null) panelContent = GetComponent<RectTransform>();
-        
-        _originalScale = panelContent.localScale;
-        _isInitialized = true;
+    protected virtual void Setup()
+    {        
+        if (isInitialized) return;
+
+        canvasGroup = gameObject.GetComponent<CanvasGroup>();
+        contentRoot = gameObject.GetComponent<RectTransform>();
+        if (contentRoot != null)
+        {
+            originalPosition = contentRoot.anchoredPosition;
+        }
+
+        isInitialized = true;
+        InitializeButtons();
+        InitializeText();
     }
+
+    protected virtual void AddButtonListenerWithFeedback(Button button, Action action, bool includeClickSound = true)
+    {
+        if (button == null) return;
+
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() =>
+        {
+            PlayButtonClickFeedback(button.transform);
+            action?.Invoke();
+
+        });
+    }
+
+    #region Ipanel Implementation
 
     public virtual async Task ShowAsync(object transitionData = null)
     {
-        if (!_isInitialized) InitializeComponents();
-        
+        if (!isInitialized) Setup();
+        PrepareForShow();
+
+        await Task.CompletedTask;
+    }
+    public virtual async Task HideAsync(object transitionData = null)
+    {
+        CleanUpAfterHide();
+        await Task.CompletedTask;
+
+    }
+
+    public virtual void OnPause() { }
+
+    public virtual void OnResume() {}
+
+    public virtual void OnQuit() {}
+
+    #endregion
+
+
+    protected virtual void PrepareForShow()
+    {
+        _cts = new CancellationTokenSource(); // << Bunu ekle
         gameObject.SetActive(true);
-        canvasGroup.alpha = 0;
-        panelContent.localScale = Vector3.zero;
-
-        // Reset animation if already playing
-        _currentAnimation?.Kill();
-
-        // Create show animation sequence
-        _currentAnimation = DOTween.Sequence()
-            .Append(canvasGroup.DOFade(1, fadeDuration))
-            .Join(panelContent.DOScale(_originalScale * contentScaleMultiplier, scaleDuration * 0.7f).SetEase(Ease.OutQuad))
-            .Append(panelContent.DOScale(_originalScale, scaleDuration * 0.3f).SetEase(showEase))
-            .OnComplete(() => _currentAnimation = null);
-
-        await _currentAnimation.AsyncWaitForCompletion();
+        canvasGroup.alpha = 1f;
+        canvasGroup.interactable = true;
+        canvasGroup.blocksRaycasts = true;
+        contentRoot.anchoredPosition = originalPosition;
     }
 
-    public virtual async Task HideAsync()
+    protected virtual void CleanUpAfterHide()
     {
-        if (!gameObject.activeSelf) return;
-
-        // Reset animation if already playing
-        _currentAnimation?.Kill();
-
-        // Create hide animation
-        _currentAnimation = DOTween.Sequence()
-            .Append(canvasGroup.DOFade(0, fadeDuration * 0.7f))
-            .Join(panelContent.DOScale(Vector3.zero, scaleDuration * 0.5f).SetEase(hideEase))
-            .OnComplete(() =>
-            {
-                gameObject.SetActive(false);
-                _currentAnimation = null;
-                OnPanelHidden();
-            });
-
-        await _currentAnimation.AsyncWaitForCompletion();
+        _cts?.Cancel();
+        gameObject.SetActive(false);
     }
 
-    protected virtual void OnPanelHidden()
-    {
-        // Override in child classes for custom behavior
-    }
 
-    protected void PlayButtonAppearAnimation(Transform buttonTransform, float delayMultiplier = 1f)
+    protected virtual void PlayButtonClickFeedback(Transform buttonTransform)
     {
-        buttonTransform.localScale = Vector3.zero;
-        buttonTransform.DOScale(Vector3.one, 0.4f)
-            .SetEase(Ease.OutBack)
-            .SetDelay(buttonAppearDelay * delayMultiplier);
+        if (buttonTransform == null) return;
+        Effects.Buttons.PlayClick(buttonTransform);
     }
+    protected virtual void InitializeButtons() {}
 
-    protected void PlayButtonClickFeedback(Transform buttonTransform)
-    {
-        buttonTransform.DOKill();
-        buttonTransform.DOPunchScale(
-            Vector3.one * buttonClickFeedbackIntensity, 
-            0.3f, 
-            2, 
-            0.5f
-        ).OnComplete(() => buttonTransform.localScale = Vector3.one);
-    }
+    protected virtual void InitializeText() {}
 
-    protected virtual void OnDestroy()
-    {
-        // Clean up all tweens
-        _currentAnimation?.Kill();
-        DOTween.Kill(transform);
-    }
 
-    protected void SafeAddButtonListener(Button button, Action action)
+
+#if UNITY_EDITOR
+    protected virtual void OnValidate()
     {
-        if (button != null)
+        // Auto-get references in editor but not at runtime
+        if (!Application.isPlaying)
         {
-            button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(() => 
-            {
-                action?.Invoke();
-                PlayButtonClickFeedback(button.transform);
-            });
+            if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
+            if (contentRoot == null) contentRoot = GetComponent<RectTransform>();
         }
     }
+#endif
 }
+
+

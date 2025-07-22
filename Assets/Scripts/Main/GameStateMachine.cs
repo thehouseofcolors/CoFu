@@ -1,86 +1,37 @@
-
 using System;
 using System.Threading.Tasks;
 using UnityEngine;
+using GameEvents;
 
 public static class GameStateMachine
 {
     private static IGameState _currentState;
-    private static IGameState _previousState;
     private static bool _isTransitioning;
-    private static int _transitionCount;
-
-    private static bool _logTransitions = true;
-    private static bool _logTransitionTimes = false;
-    private static float _minWarningTransitionTime = 0.1f;
 
     public static IGameState CurrentState => _currentState;
-    public static IGameState PreviousState => _previousState;
-    public static bool IsTransitioning => _isTransitioning;
-    public static int TransitionCount => _transitionCount;
+    public static bool IsTransitioning => _isTransitioning; // Optional: expose if needed
 
-    public static async Task ChangeStateAsync(IGameState newState, StateTransitionOptions options = null)
+    public static async Task SetStateAsync(IGameState newState)
     {
-
-        Debug.Log($"From {_currentState?.GetType().Name} to {newState?.GetType().Name}");
-
-        options ??= StateTransitionOptions.Default;
-
-        if (_isTransitioning && !options.AllowNestedTransitions)
+        if (_isTransitioning)
         {
-            Debug.LogWarning($"State transition blocked - already transitioning. Current: {_currentState?.GetType().Name}, New: {newState?.GetType().Name}");
-            return;
-        }
-
-        if (_currentState == newState && !options.AllowReentry)
-        {
-            if (_logTransitions)
-                Debug.Log($"State re-entry blocked for {newState?.GetType().Name}");
+            Debug.LogWarning($"Blocked transition to {newState?.GetType().Name} (already transitioning)");
             return;
         }
 
         _isTransitioning = true;
-        _transitionCount++;
-
-        System.Diagnostics.Stopwatch sw = null;
-        if (_logTransitionTimes)
-        {
-            sw = System.Diagnostics.Stopwatch.StartNew();
-        }
 
         try
         {
-            if (_currentState != null && _logTransitions)
-                Debug.Log($"Exiting state: {_currentState.GetType().Name}");
-
-            await _currentState?.ExitAsync();
-
-            _previousState = _currentState;
+            await (_currentState?.ExitAsync() ?? Task.CompletedTask);
             _currentState = newState;
-
-            if (_currentState != null && _logTransitions)
-                Debug.Log($"Entering state: {_currentState.GetType().Name}");
-
-            await _currentState?.EnterAsync();
-
-            if (sw != null)
-            {
-                sw.Stop();
-                var elapsed = sw.Elapsed.TotalSeconds;
-                if (elapsed > _minWarningTransitionTime)
-                {
-                    Debug.LogWarning($"State transition took {elapsed:0.000}s - {_previousState?.GetType().Name} → {_currentState?.GetType().Name}");
-                }
-            }
+            await (_currentState?.EnterAsync() ?? Task.CompletedTask);
         }
         catch (Exception ex)
         {
-            Debug.LogError($"State transition failed: {ex}");
-            if (options.RevertOnFailure)
-            {
-                Debug.LogWarning($"Reverting to previous state: {_previousState?.GetType().Name}");
-                await ChangeStateAsync(_previousState, new StateTransitionOptions { AllowNestedTransitions = true });
-            }
+            Debug.LogError($"State failed: {ex}");
+            // Optional: Add recovery logic here if needed
+            throw; // Re-throw if you want callers to handle it
         }
         finally
         {
@@ -88,40 +39,74 @@ public static class GameStateMachine
         }
     }
 
-    public static async Task SetInitialStateAsync(IGameState initialState)
-    {
-        if (_currentState != null)
-        {
-            Debug.LogError("Initial state already set.");
-            return;
-        }
-
-        _currentState = initialState;
-        _previousState = null;
-
-        if (_logTransitions)
-            Debug.Log($"[GameStateMachine] Setting initial state: {_currentState.GetType().Name}");
-
-        await _currentState.EnterAsync();
-    }
-
     public static bool IsInState<T>() where T : IGameState => _currentState is T;
+}
 
-    public static bool TryGetCurrentState<T>(out T state) where T : class, IGameState
+public abstract class GameStateBase : IGameState
+{
+    public virtual Task EnterAsync() => Task.CompletedTask;
+    public virtual Task ExitAsync() => Task.CompletedTask;
+
+    protected async Task PublishEventAsync(IGameEvent gameEvent)
     {
-        state = _currentState as T;
-        return state != null;
-    }
-
-    public static string CurrentStateName => _currentState?.GetType().Name ?? "None";
-    public static string PreviousStateName => _previousState?.GetType().Name ?? "None";
-
-    public class StateTransitionOptions
-    {
-        public static StateTransitionOptions Default => new StateTransitionOptions();
-
-        public bool AllowNestedTransitions = false;
-        public bool AllowReentry = false;
-        public bool RevertOnFailure = true;
+        try
+        {
+            await EventBus.PublishAuto(gameEvent);
+        }
+        catch(Exception ex)
+        {
+            Debug.LogError($"Event publish failed: {ex}");
+        }
     }
 }
+
+public class PlayingState : GameStateBase
+{
+    LevelConfig levelConfig = LevelManager.Instance.CurrentLevel;
+    
+    public override async Task EnterAsync()
+    {
+        if (levelConfig == null)
+        {
+            Debug.LogError("Missing level config!");
+            return;
+        }
+        await PublishEventAsync(new GameLoadEvent());
+
+        Debug.Log("[State] Entering game loading");
+
+        await PublishEventAsync(new GameStartEvent());
+        EnableInput();
+        StartTimer(levelConfig.JokerConfig.TimeLimit);
+    }
+    public override async Task ExitAsync()
+    {
+        DisableInput();
+        PauseTimer();
+        await Task.CompletedTask;
+    }
+
+
+    public void EnableInput() => TileInputHandler.Instance.EnableInput();
+    public void DisableInput() => TileInputHandler.Instance.DisableInput();
+    public void StartTimer(float duration) => GameTimer.StartTimer(duration);
+    public void PauseTimer() => GameTimer.Pause();
+    public void ResumeTimer() => GameTimer.Resume();
+    public void ExtendTimer(float duration) => GameTimer.StartTimer(duration);//sadece zaman bittiğinde çağrılabildiği için yeniden başlatmakla aynı
+
+}
+
+public class NonPlayingState : GameStateBase
+{
+    public NonPlayingState()
+    {
+    }
+    public override async Task EnterAsync()
+    {
+        Debug.Log("[State] Game Paused");
+        
+        await Task.CompletedTask;
+
+    }
+}
+

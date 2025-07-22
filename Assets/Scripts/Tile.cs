@@ -1,23 +1,19 @@
 
 using UnityEngine;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using UnityEditor.U2D.Aseprite;
-using System;
 using GameEvents;
 
-[RequireComponent(typeof(SpriteRenderer), typeof(TileEffectController))]
+[RequireComponent(typeof(SpriteRenderer))]
 public class Tile : MonoBehaviour, IColorSource
 {
     // Serialized Fields
     [SerializeField] private SpriteRenderer spriteRenderer;
-    [SerializeField] private TileEffectController tileEffectController;
+
 
     // Properties
     private Stack<ColorVector> colorStack = new Stack<ColorVector>();
     public bool IsEmpty() => colorStack.Count == 0;
-    public bool IsUIBased() => false;
     public bool CanSelectable { get; set; }
     public int X { get; private set; }
     public int Y { get; private set; }
@@ -27,8 +23,6 @@ public class Tile : MonoBehaviour, IColorSource
     {
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
-        if (tileEffectController == null)
-            tileEffectController = GetComponent<TileEffectController>();
         UpdateVisual();
     }
 
@@ -42,11 +36,11 @@ public class Tile : MonoBehaviour, IColorSource
     {
         if (IsEmpty()) return ColorVector.Null;
         var color = colorStack.Pop();
-        tileEffectController.PlayPopAnimation();
+        Effects.Tiles.PlayPop(transform);
         UpdateVisual();
         return color;
     }
-    public Vector3 GetPosition()
+    public Vector3 GetWorldPosition()
     {
         return transform.position;
     }
@@ -54,7 +48,7 @@ public class Tile : MonoBehaviour, IColorSource
     public void PushColor(ColorVector color)
     {
         colorStack.Push(color);
-        tileEffectController.PlayPushAnimation();
+        Effects.Tiles.PlayPush(transform);
         UpdateVisual();
     }
 
@@ -75,7 +69,7 @@ public class Tile : MonoBehaviour, IColorSource
 
     public void SetHighlight(bool on)
     {
-        tileEffectController.SetHighlight(on);
+        Effects.Tiles.Highlight(transform, on);
     }
     public void SetTemporarilyDisabled(bool disabled)
     {
@@ -124,7 +118,7 @@ public class Tile : MonoBehaviour, IColorSource
         try
         {
             CanSelectable = false; // Prevent double clicks
-            await tileEffectController.PlaySelectedEffect(spriteRenderer);
+            await Effects.Tiles.PlaySelected(transform, spriteRenderer);
             await EventBus.PublishAuto(new TileSelectionEvent(this));
         }
         finally

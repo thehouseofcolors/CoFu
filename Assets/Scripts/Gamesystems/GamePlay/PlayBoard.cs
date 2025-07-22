@@ -3,9 +3,8 @@ using System.Threading.Tasks;
 using UnityEngine;
 using GameEvents;
 using System;
-using System.Linq;
 
-public class PlayBoardManager : Singleton<PlayBoardManager>, IGameSystem
+public class PlayBoardManager : MonoBehaviour, IGameSystem
 {
     [Header("Board Settings")]
     [SerializeField] private Tile _tilePrefab;
@@ -15,15 +14,17 @@ public class PlayBoardManager : Singleton<PlayBoardManager>, IGameSystem
     private List<Tile> _allTiles = new List<Tile>();
     private List<IDisposable> _eventSubscriptions = new List<IDisposable>();
 
-    public void Initialize()
+    public async Task Initialize()
     {
         SubscribeEvents();
+        await Task.CompletedTask;
     }
 
-    public void Shutdown()
+    public async Task Shutdown()
     {
         UnsubscribeEvents();
         ClearGrid();
+        await Task.CompletedTask;
     }
 
     private void SubscribeEvents()
@@ -68,8 +69,8 @@ public class PlayBoardManager : Singleton<PlayBoardManager>, IGameSystem
                 _gridParent,
                 _tilePrefab,
                 _spacing,
-                level.tiles_in_a_column,
-                level.tiles_in_a_row
+                level.GridConfig.Columns,
+                level.GridConfig.Rows
             );
 
             if (_allTiles == null || _allTiles.Count == 0)
@@ -79,7 +80,7 @@ public class PlayBoardManager : Singleton<PlayBoardManager>, IGameSystem
             }
 
             // Decode and apply colors
-            var colors = SeedEncoder.DecodeSeedToColors(level.seed);
+            var colors = SeedEncoder.DecodeSeedToColors(level.Seed);
 
             // Paint tiles with async loading effect
             await PaintManager.PaintTiles(_allTiles, colors);
@@ -97,8 +98,8 @@ public class PlayBoardManager : Singleton<PlayBoardManager>, IGameSystem
 
     private async Task OnLevelLoad(GameLoadEvent e)
     {
-        await SetupGrid(e.Level);
-
+        await SetupGrid(LevelManager.Instance.CurrentLevel);
+        await Task.CompletedTask;
         await EventBus.PublishAuto(new GameStartEvent());
     }
 
@@ -126,7 +127,7 @@ public class PlayBoardManager : Singleton<PlayBoardManager>, IGameSystem
                 try
                 {
                     // await EventBus.PublishAuto(new GameWinEvent());
-                    await GameStateMachine.ChangeStateAsync(new GameWinState());
+                    // await GameStateMachine.ChangeStateAsync(new GameWinState());
                 }
                 catch (Exception ex)
                 {
@@ -140,7 +141,6 @@ public class PlayBoardManager : Singleton<PlayBoardManager>, IGameSystem
             Debug.LogError($"Error in OnTileFuse: {ex}");
         }
     }
-
 
 
     private async Task OnGamePause(GamePauseEvent e)
@@ -191,3 +191,4 @@ public class PlayBoardManager : Singleton<PlayBoardManager>, IGameSystem
 
     }
 }
+

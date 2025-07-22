@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5693682550630468135}
-  - component: {fileID: 6076743437507364206}
+  - component: {fileID: 8946324416137023092}
   - component: {fileID: 2263759726374559084}
   - component: {fileID: 4953892466623894065}
   - component: {fileID: 7296654096035783422}
@@ -42,7 +42,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &6076743437507364206
+--- !u!114 &8946324416137023092
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -51,17 +51,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 2875504345346427298}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eb3c67aa12c5d8042adea8bf74e2e37d, type: 3}
+  m_Script: {fileID: 11500000, guid: 1aaa325bc71aec34c9ae11fd256775fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  nextButton: {fileID: 99757777189369816}
-  menuButton: {fileID: 3442321395593551219}
+  verticalOffset: 100
+  contentRoot: {fileID: 5693682550630468135}
   canvasGroup: {fileID: 7296654096035783422}
-  contentTransform: {fileID: 5693682550630468135}
-  fadeDuration: 0.3
-  scaleDuration: 0.5
-  appearDelay: 0.2
-  scaleEase: 27
+  continueButton: {fileID: 99757777189369816}
+  menuButton: {fileID: 3442321395593551219}
+  scoreText: {fileID: 2743787810574229484}
 --- !u!222 &2263759726374559084
 CanvasRenderer:
   m_ObjectHideFlags: 0

@@ -8,7 +8,7 @@ using UnityEngine;
 public class TileSelectionHandler : MonoBehaviour, IGameSystem
 {
     // Serialized Fields
-    [SerializeField] private float selectionCooldown = 0.3f;
+    private float selectionCooldown = 0.3f;
 
     // Private State
     private IColorSource _firstTile;
@@ -24,15 +24,17 @@ public class TileSelectionHandler : MonoBehaviour, IGameSystem
         Processing
     }
 
-    public void Initialize()
+    public async Task Initialize()
     {
         SubscribeEvents();
+        await Task.CompletedTask;
     }
 
-    public void Shutdown()
+    public async Task Shutdown()
     {
         UnsubscribeEvents();
         ClearSelection();
+        await Task.CompletedTask;
     }
 
     private void SubscribeEvents()

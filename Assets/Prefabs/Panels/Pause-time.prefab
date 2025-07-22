@@ -10,6 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 8867579743627792739}
   - component: {fileID: 5620131965418292547}
+  - component: {fileID: 7948619755422635037}
+  - component: {fileID: 1483340149166143981}
   m_Layer: 5
   m_Name: Pause-time
   m_TagString: Untagged
@@ -46,6 +48,36 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3599536353723216235}
   m_CullTransparentMesh: 1
+--- !u!225 &7948619755422635037
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3599536353723216235}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &1483340149166143981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3599536353723216235}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c116e22a791a5d44b83a4f170b581195, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  contentRoot: {fileID: 8867579743627792739}
+  canvasGroup: {fileID: 7948619755422635037}
+  panelType: 1
+  extraTimeButton: {fileID: 6833352665774204565}
+  failButton: {fileID: 4293373157561529937}
+  failText: {fileID: 0}
 --- !u!1001 &5140774137341477559
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -143,6 +175,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 327f883d6748b154b9850da97915646d, type: 3}
+--- !u!114 &6833352665774204565 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1838384387518997538, guid: 327f883d6748b154b9850da97915646d, type: 3}
+  m_PrefabInstance: {fileID: 5140774137341477559}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!224 &8270692384249867340 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3859818183539879675, guid: 327f883d6748b154b9850da97915646d, type: 3}
@@ -245,6 +288,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3fd49ec2f0c636b4b8b9853e7f6b4e92, type: 3}
+--- !u!114 &4293373157561529937 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5502549592928798806, guid: 3fd49ec2f0c636b4b8b9853e7f6b4e92, type: 3}
+  m_PrefabInstance: {fileID: 8631671575807737351}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!224 &7395346571259922244 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1254348252367747395, guid: 3fd49ec2f0c636b4b8b9853e7f6b4e92, type: 3}

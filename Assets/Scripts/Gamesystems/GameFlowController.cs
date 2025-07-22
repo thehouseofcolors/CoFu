@@ -1,3 +1,5 @@
+
+
 using System;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -6,48 +8,86 @@ using System.Collections.Generic;
 
 public class GameFlowController : MonoBehaviour, IGameSystem
 {
-    [SerializeField] LevelConfigCollection collection;
+    private int _defaultFallbackLevel = 1;
     private List<IDisposable> _subscriptions = new();
- 
-    public void Initialize()
-    {
-        _subscriptions.Add(EventBus.Subscribe<GameStartRequestedEvent>(OnGameStart));
-        _subscriptions.Add(EventBus.Subscribe<NextLevelRequestedEvent>(OnNextLevelRequested));
-        _subscriptions.Add(EventBus.Subscribe<LevelRestartRequestedEvent>(OnLevelRestartRequested));
-        _subscriptions.Add(EventBus.Subscribe<MenuRequestedEvent>(OnMenuRequested));
+    private bool _isProcessingRequest;
 
-        // Menüde preload yap
+    public async Task Initialize()
+    {
+        DisposeSubscriptions();
+
+        _subscriptions.AddRange(new IDisposable[]
+        {
+            EventBus.Subscribe<GameLoadRequestedEvent>(OnGameLoad),
+            EventBus.Subscribe<NextLevelRequestedEvent>(OnNextLevelRequested),
+            EventBus.Subscribe<LevelRestartRequestedEvent>(OnLevelRestartRequested),
+            EventBus.Subscribe<MenuRequestedEvent>(OnMenuRequested)
+        });
+
+        await Task.CompletedTask;
     }
-    public void Shutdown()
+
+    public async Task Shutdown()
+    {
+        DisposeSubscriptions();
+        await Task.CompletedTask;
+    }
+    private void DisposeSubscriptions()
     {
         foreach (var sub in _subscriptions)
-            sub.Dispose();
+            sub?.Dispose();
         _subscriptions.Clear();
-
     }
 
-    private async Task OnGameStart(GameStartRequestedEvent e)
+
+    private async Task OnGameLoad(GameLoadRequestedEvent e)
     {
-        Debug.Log("gamerequest dinlendl ve gamastate değiştirilecek");
-        Debug.Log($"current level {PlayerPrefsService.CurrentLevel}");
-        Debug.Log($"level = {collection.GetLevelConfig(PlayerPrefsService.CurrentLevel)}");
-        await GameStateMachine.ChangeStateAsync(new GamePlayState(collection.GetLevelConfig(PlayerPrefsService.CurrentLevel)));
+        // await GameStateMachine.ChangeStateAsync(new GameLoadingState());
 
+        // Bir sonraki frame'de geçişe izin ver
+        await Task.CompletedTask;
+
+        await EventBus.PublishAuto(new GameStartEvent());
     }
+
+    private async Task<LevelConfig> ResolveLevelConfig()
+    {
+        int levelId = PlayerPrefsService.CurrentLevel;
+        LevelConfig levelConfig = LevelManager.Instance.CurrentLevel;
+
+        if (levelConfig != null)
+        {
+            Debug.LogWarning($"Level {levelId} not found! Falling back to {_defaultFallbackLevel}");
+            PlayerPrefsService.CurrentLevel = _defaultFallbackLevel;
+            return await ResolveLevelConfig(); // Retry with fallback
+        }
+
+        return levelConfig;
+    }
+
 
     private async Task OnNextLevelRequested(NextLevelRequestedEvent e)
     {
         PlayerPrefsService.IncrementLevel();
-        await OnGameStart(new GameStartRequestedEvent());
+        await OnGameLoad(new GameLoadRequestedEvent());
     }
 
     private async Task OnLevelRestartRequested(LevelRestartRequestedEvent e)
     {
-        await OnGameStart(new GameStartRequestedEvent());
+        await OnGameLoad(new GameLoadRequestedEvent());
     }
 
     private async Task OnMenuRequested(MenuRequestedEvent e)
     {
-        await GameStateMachine.ChangeStateAsync(new MenuState());
+        if (_isProcessingRequest) return;
+
+        await GameStateMachine.SetStateAsync(new NonPlayingState());
     }
+
+    private async void OnDestroy()
+    {
+        await Shutdown();
+    }
+    
 }
+

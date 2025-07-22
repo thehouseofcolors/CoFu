@@ -1,53 +1,136 @@
+//panele ekle
+
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
-using DG.Tweening;
 using TMPro;
-
+using System.Threading;
+using DG.Tweening;
 
 public class LoadingPanelController : BasePanelController
 {
-    [Header("Loading Specifics")]
+    [Header("Loading Settings")]
     [SerializeField] private Slider loadingBar;
     [SerializeField] private TextMeshProUGUI loadingText;
     [SerializeField] private TextMeshProUGUI CoFuText;
-    [SerializeField] private float minLoadingTime = 2f;
-    [SerializeField] private float maxLoadingTime = 3f;
+    [SerializeField, Min(0.1f)] private float loadingDuration = 5f;
+    [SerializeField, Min(0)] private float completionDelay = 3f;
+
+    private CancellationTokenSource _loadingCTS;
+    private Tween _bounceTween;
 
     protected override void Awake()
     {
         base.Awake();
-        loadingBar.value = 0;
+        ResetLoadingUI();
+        // await ShowAsync();
+        // await HideAsync();
+    }
+
+    private void ResetLoadingUI()
+    {
+        if (loadingBar != null) loadingBar.value = 0;
+        if (loadingText != null) loadingText.text = "Loading... 0%";
     }
 
     public override async Task ShowAsync(object transitionData = null)
     {
-        loadingBar.value = 0;
-        loadingText.text = "Loading... 0%";
+        await base.ShowAsync();
+        _loadingCTS = new CancellationTokenSource();
 
-        await base.ShowAsync(transitionData);
-        await SimulateLoadingProgress();
+        StartBounceAnimation();
+        await Effects.PanelTransition.Fade(canvasGroup, true);
+
+        await RunLoadingOperation(_loadingCTS.Token);
     }
 
-    private async Task SimulateLoadingProgress()
+    public override async Task HideAsync(object transitionData = null)
     {
-        float elapsedTime = 0f;
-        float randomLoadingTime = Random.Range(minLoadingTime, maxLoadingTime);
+        StopBounceAnimation();
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.right, false);
+        CancelLoadingOperation();
+        await base.HideAsync();
+    }
 
-        while (elapsedTime < randomLoadingTime)
+    private void StartBounceAnimation()
+    {
+        if (CoFuText != null)
         {
-            elapsedTime += Time.deltaTime;
-            float progress = Mathf.Clamp01(elapsedTime / randomLoadingTime);
+            _bounceTween = Effects.Texts.Bounce(CoFuText.transform);
+            
+        }
+    }
 
-            loadingBar.DOValue(progress, 0.2f);
-            loadingText.text = $"Loading... {Mathf.FloorToInt(progress * 100)}%";
+    
+    private void StopBounceAnimation()
+    {
+        if (_bounceTween != null && _bounceTween.IsActive())
+        {
+            _bounceTween.Kill();
+            _bounceTween = null;
+        }
+    }
 
+    private async Task RunLoadingOperation(CancellationToken token)
+    {
+        try
+        {
+            await AnimateLoadingProgress(token);
+            await FinalizeLoading(token);
+        }
+        catch (TaskCanceledException)
+        {
+            Debug.Log("Loading operation cancelled");
+        }
+    }
+
+    private async Task AnimateLoadingProgress(CancellationToken token)
+    {
+        float elapsed = 0f;
+        while (elapsed < loadingDuration && !token.IsCancellationRequested)
+        {
+            elapsed += Time.deltaTime;
+            UpdateProgressDisplay(elapsed / loadingDuration);
             await Task.Yield();
         }
-
-        loadingBar.value = 1f;
-        loadingText.text = "Loading... 100%";
-        await Task.Delay(300);
     }
 
+    private async Task FinalizeLoading(CancellationToken token)
+    {
+        if (token.IsCancellationRequested) return;
+
+        UpdateProgressDisplay(1f);
+        await Task.Delay((int)(completionDelay * 1000), token);
+    }
+
+    private void UpdateProgressDisplay(float progress)
+    {
+        progress = Mathf.Clamp01(progress);
+        if (loadingBar != null) loadingBar.value = progress;
+        if (loadingText != null) loadingText.text = $"Loading... {Mathf.FloorToInt(progress * 100)}%";
+    }
+
+    private void CancelLoadingOperation()
+    {
+        _loadingCTS?.Cancel();
+        _loadingCTS?.Dispose();
+        _loadingCTS = null;
+    }
+
+    protected override void CleanUpAfterHide()
+    {
+        StopBounceAnimation();
+        CancelLoadingOperation();
+        base.CleanUpAfterHide();
+    }
+
+#if UNITY_EDITOR
+    protected override void OnValidate()
+    {
+        base.OnValidate();
+        loadingDuration = Mathf.Max(0.1f, loadingDuration);
+        completionDelay = Mathf.Max(0, completionDelay);
+    }
+#endif
 }
+

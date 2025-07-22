@@ -1,127 +1,33 @@
 
-
 using System.Threading.Tasks;
 using UnityEngine;
 using GameEvents;
-using NUnit.Framework.Interfaces;
 using System.Collections.Generic;
 using System;
-using DG.Tweening;
-
-
-// public class FusionProcessor : MonoBehaviour, IGameSystem
-// {
-//     List<IDisposable> disposables = new List<IDisposable>();
-
-//     public void Initialize()
-//     {
-//         SubscribeEvents();
-//     }
-
-//     public void Shutdown()
-//     {
-//         UnsubscribeEvents();
-//     }
-
-//     private void SubscribeEvents()
-//     {
-//         disposables.Add(EventBus.Subscribe<TileFuseEvent>(HandleTileFuse));
-//     }
-
-//     private void UnsubscribeEvents()
-//     {
-//         foreach (var d in disposables)
-//         {
-//             d?.Dispose();
-//         }
-//     }
-
-
-//     async Task HandleTileFuse(TileFuseEvent e)
-//     {
-//         var result = ColorFusion.Fuse(e.Source.PeekColor(), e.Target.PeekColor());
-//         if (!result.IsValidColor)
-//         {
-//             CameraShaker.Instance.ShakeCamera();
-//             return;
-//         }
-
-//         await ApproveMerge(e);
-//         if (result.IsWhite)
-//         {
-//             e.Target.PopTopColor();
-//         }
-
-//     }
-
-
-//     private ColorVector ProcessColorMerge(Tile source, Tile target)
-//     {
-//         return ColorFusion.Fuse(source.PeekColor(), target.PeekColor());
-//     }
-
-
-//     private async Task ApproveMerge(TileFuseEvent e)
-//     {
-//         PlayerPrefsService.RemainingMoves -= 1;
-//         // await e.Source.TransferColorTo(e.Target);
-//         await EventBus.PublishAuto(new UpdateMoveCountUIEvent(PlayerPrefsService.RemainingMoves));
-//         await Task.CompletedTask;
-//     }
-
-//     // Öncelikle EffectManager referansını al
-//     [SerializeField] private EffectManager effectManager;
-
-//     async Task HandleColorMerge(Tile firstTile, Tile secondTile, Tile targetTile)
-//     {
-//         var color1 = firstTile.PopTopColor();
-//         var color2 = secondTile.PopTopColor();
-
-//         Vector3 mergePoint = Vector3.zero;
-
-//         // İki renk efektini tile pozisyonlarından mergePoint'e gönder
-//         await Task.WhenAll(
-//             effectManager.SpawnAndMoveColorEffect(color1, firstTile.transform.position, mergePoint),
-//             effectManager.SpawnAndMoveColorEffect(color2, secondTile.transform.position, mergePoint)
-//         );
-
-//         // Burada birleşme efektini oynat
-//         var fusedColor = ColorFusion.Fuse(color1, color2);
-//         await effectManager.PlayMergeEffect(fusedColor, mergePoint);
-
-//         // Sonuca göre efekt hedefe hareket eder
-//         if (fusedColor.IsWhite)
-//             await effectManager.MoveEffectToUI(fusedColor, effectManager.scoreTarget.position);
-//         else
-//             await effectManager.MoveEffectToTile(fusedColor, targetTile.transform.position);
-
-//         // Burada tile verilerini güncelle
-//         targetTile.PushColor(fusedColor);
-//     }
-
-
-// }
 
 public class FusionProcessor : MonoBehaviour, IGameSystem
 {
     [Header("Dependencies")]
-    // [SerializeField] private EffectManager effectManager;
-    [SerializeField] private CameraShaker cameraShaker;
-    [SerializeField] private GameObject prefab;
-    [SerializeField] private Transform whiteTarget;
-
-    [SerializeField] private Transform slotTarget;
-
-
-    [Header("Settings")]
-    [SerializeField] private float fusionDuration = 0.5f;
-    [SerializeField] private float whiteScoreDelay = 0.3f;
+    [SerializeField] private IntermediateSlotManager _slotManager;
+    [SerializeField] private GameObject _colorEffectPrefab;
+    [SerializeField] private Transform _whiteScoreTarget;
+    private Transform _mergeCenterPoint;
+    
 
     private readonly List<IDisposable> _disposables = new List<IDisposable>();
     private bool _isProcessingFusion;
 
-    public void Initialize() => SubscribeEvents();
-    public void Shutdown() => UnsubscribeEvents();
+    public Task Initialize()
+    {
+        SubscribeEvents();
+        return Task.CompletedTask;
+    }
+
+    public Task Shutdown()
+    {
+        UnsubscribeEvents();
+        return Task.CompletedTask;
+    }
 
     private void SubscribeEvents()
     {
@@ -139,7 +45,7 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
 
     private async void HandleTileFuse(TileFuseEvent e)
     {
-        if (_isProcessingFusion || e.Source == null || e.Target == null)
+        if (_isProcessingFusion || !IsValidFusion(e))
             return;
 
         _isProcessingFusion = true;
@@ -148,21 +54,27 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         {
             await ProcessFusion(e.Source, e.Target);
         }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Fusion failed: {ex}");
+        }
         finally
         {
             _isProcessingFusion = false;
         }
     }
 
+    private bool IsValidFusion(TileFuseEvent e)
+    {
+        return e.Source != null &&
+               e.Target != null &&
+               !e.Source.IsEmpty() &&
+               !e.Target.IsEmpty();
+    }
+
     private async Task ProcessFusion(IColorSource source, IColorSource target)
     {
-        // Validate colors
-        if (source.IsEmpty() || target.IsEmpty())
-        {
-            await HandleInvalidFusion();
-            return;
-        }
-
+        // Get colors and fusion result
         var sourceColor = source.PeekColor();
         var targetColor = target.PeekColor();
         var fusionResult = ColorFusion.Fuse(sourceColor, targetColor);
@@ -173,107 +85,115 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
             return;
         }
 
-        await ExecuteFusion(source, target, fusionResult);
-    }
-
-    private async Task ExecuteFusion(IColorSource source, IColorSource target, ColorVector resultColor)
-    {
+        // Execute fusion flow
         source.SetTemporarilyDisabled(true);
         target.SetTemporarilyDisabled(true);
-        await AnimateColorMerge(source, target);
 
-        GameObject effectGO = await EffectManager.PlayMergeEffectAsync(new EffectParams
+        try
         {
-            Prefab=prefab,
-            Color = resultColor,
-            StartPos = Vector3.zero,
-            EndPos = Vector3.zero,
-        });
-
-        bool isSucced = await HandleMergedFusion(effectGO, resultColor);
-        if (isSucced)
-        {
-            source.PopTopColor();
-            target.PopTopColor();
+            await AnimateColorMerge(source, target);
+            await HandleFusionResult(source, target, fusionResult);
+            
         }
-        source.SetTemporarilyDisabled(false);
-        target.SetTemporarilyDisabled(false);
-        // 3. State update
-        PlayerPrefsService.RemainingMoves--;
-        await EventBus.PublishAuto(new UpdateMoveCountUIEvent(PlayerPrefsService.RemainingMoves));
+        finally
+        {
+            source.SetTemporarilyDisabled(false);
+            target.SetTemporarilyDisabled(false);
+        }
     }
-    private async Task<bool> HandleMergedFusion(GameObject effectGO, ColorVector resultColor)
+
+    private async Task AnimateColorMerge(IColorSource source, IColorSource target)
     {
+        var moveSourceTask = CreateAndMoveEffect(
+            source.PeekColor(),
+            source.GetWorldPosition(),
+            _mergeCenterPoint.position
+        );
+
+        var moveTargetTask = CreateAndMoveEffect(
+            target.PeekColor(),
+            target.GetWorldPosition(),
+            _mergeCenterPoint.position
+        );
+
+        await Task.WhenAll(moveSourceTask, moveTargetTask);
+    }
+
+    private async Task HandleFusionResult(IColorSource source, IColorSource target, ColorVector resultColor)
+    {
+        var mergeEffect = await CreateMergeEffect(resultColor);
+
         if (resultColor.IsWhite)
         {
-            await EffectManager.PlayMoveEffectAsync(effectGO, whiteTarget.position);
-            return true;
+            await HandleWhiteResult(mergeEffect);
+            RemoveColors(source, target);
         }
         else
         {
-            if (IntermediateSlotManager.Instance.HasEmptySlot())
-            {
-                SlotController slot = IntermediateSlotManager.Instance.GetSlot();
-                await EffectManager.PlayMoveEffectAsync(effectGO, slot.GetPosition());
-                slot.SetColor(resultColor);
-                return true;
-
-            }
-            else
-            {
-                await HandleInvalidFusion();
-                await EffectManager.PlayMergeFailEffectAsync(effectGO);
-                return false;
-            }
+            var success = await HandleColorResult(mergeEffect, resultColor);
+            if (success) RemoveColors(source, target);
         }
     }
-    private async Task AnimateColorMerge(IColorSource source, IColorSource target)
+
+    private async Task<GameObject> CreateMergeEffect(ColorVector color)
     {
-        var task1 = EffectManager.PlayMoveEffectAsync(new EffectParams
+        return await Effects.Gameplay.PlayMergeEffectAsync(new EffectParams
         {
-            Prefab = prefab,
-            Color = source.PeekColor(),
-            StartPos = source.GetPosition(),
-            EndPos = Vector3.zero,
+            Prefab = _colorEffectPrefab,
+            Color = color,
+            StartPos = _mergeCenterPoint.position,
+            EndPos = _mergeCenterPoint.position
         });
-
-        var task2 = EffectManager.PlayMoveEffectAsync(new EffectParams
-        {
-            Prefab = prefab,
-            Color = target.PeekColor(),
-            StartPos = target.GetPosition(),
-            EndPos = Vector3.zero,
-        });
-
-        await Task.WhenAll(task1, task2);
     }
+
+    private async Task HandleWhiteResult(GameObject effect)
+    {
+        await Effects.Gameplay.PlayMoveEffectAsync(effect, _whiteScoreTarget.position);
+        
+
+    }
+
+    private async Task<bool> HandleColorResult(GameObject effect, ColorVector color)
+    {
+        if (!_slotManager.HasEmptySlot())
+        {
+            await Effects.Gameplay.PlayMergeFailEffectAsync(effect);
+            return false;
+        }
+
+        var slot = _slotManager.GetSlot();
+        await Effects.Gameplay.PlayMoveEffectAsync(effect, slot.GetWorldPosition());
+        slot.SetColor(color);
+        return true;
+    }
+
+    private void RemoveColors(IColorSource source, IColorSource target)
+    {
+        source.PopTopColor();
+        target.PopTopColor();
+    }
+
+    private async Task UpdateGameState()
+    {
+        PlayerPrefsService.RemainingMoves--;
+        await EventBus.PublishAuto(new UpdateMoveCountUIEvent(PlayerPrefsService.RemainingMoves));
+    }
+
     private async Task HandleInvalidFusion()
     {
-        cameraShaker.ShakeCamera();
+        Effects.Camera.Shake();
         await Task.Yield(); // Allow one frame for shake to register
     }
+
+    private Task CreateAndMoveEffect(ColorVector color, Vector3 startPos, Vector3 endPos)
+    {
+        return Effects.Gameplay.PlayMoveEffectAsync(new EffectParams
+        {
+            Prefab = _colorEffectPrefab,
+            Color = color,
+            StartPos = startPos,
+            EndPos = endPos
+        });
+    }
 }
-
-
-// // Recording an action
-// var undoAction = new CombineTilesUndoAction(
-//     tileA, 
-//     tileB,
-//     originalColorA,
-//     originalColorB,
-//     hadResult: true);
-
-// UndoManager.Instance.RecordAction(undoAction);
-
-// // Executing undo (from your joker UI)
-// try
-// {
-//     await undoAction.UndoAsync();
-//     // Update UI or handle success
-// }
-// catch (Exception ex)
-// {
-//     Debug.LogError($"Failed to undo: {ex.Message}");
-//     // Return joker or show error
-// }
 
