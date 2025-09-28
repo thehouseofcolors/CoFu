@@ -26,6 +26,22 @@ public class GameCore : MonoBehaviour
         await InitializeCoreSystems();
     }
 
+    // private async Task InitializeCoreSystems()
+    // {
+    //     if (_handleMobilePause && Application.isMobilePlatform)
+    //     {
+    //         SetupMobilePauseHandling();
+    //     }
+
+    //     // Initialize all systems in order of their execution order
+    //     var orderedSystems = GetComponents<IGameSystem>();
+
+    //     foreach (var system in orderedSystems)
+    //     {
+    //         await RegisterSystemAsync(system);
+    //     }
+    // }
+
     private async Task InitializeCoreSystems()
     {
         if (_handleMobilePause && Application.isMobilePlatform)
@@ -33,14 +49,18 @@ public class GameCore : MonoBehaviour
             SetupMobilePauseHandling();
         }
 
-        // Initialize all systems in order of their execution order
-        var orderedSystems = GetComponents<IGameSystem>();
+        // Sahnedeki tüm aktif GameObject'lerdeki IGameSystem bileşenlerini bul
+        var systemsInScene = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
+                             .OfType<IGameSystem>()
+                             .Distinct()
+                             .ToList();
 
-        foreach (var system in orderedSystems)
+        foreach (var system in systemsInScene)
         {
             await RegisterSystemAsync(system);
         }
     }
+
 
     // private async void OnDestroy()
     // {

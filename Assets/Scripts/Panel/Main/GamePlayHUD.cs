@@ -99,7 +99,7 @@ using System.Collections.Generic;
 // Handles game HUD logic and updates
 //panele ekle
 
-public class GamePlayHUD : MonoBehaviour, IPausable, IQuittable
+public class GamePlayHUD : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private TextMeshProUGUI moveText;
@@ -107,11 +107,7 @@ public class GamePlayHUD : MonoBehaviour, IPausable, IQuittable
     [SerializeField] private TextMeshProUGUI coinText;
     [SerializeField] private TextMeshProUGUI lifeText;
 
-
-
     private List<IDisposable> disposables = new List<IDisposable>();
-    private Vector3 _originalMoveTextScale;
-    private Vector3 _originalTimerTextScale;
     private bool isInitialized;
     void Awake()
     {
@@ -120,34 +116,20 @@ public class GamePlayHUD : MonoBehaviour, IPausable, IQuittable
     public void Setup()
     {
         if (isInitialized) return;
-        CacheOriginalScales();
-        ResetUI();
         SubscribeToEvents();
         isInitialized = true;
     }
 
-    public void OnPause() { }
 
-    public void OnResume() { }
-
-    public void OnQuit() { }
-
-    private void CacheOriginalScales()
-    {
-        _originalMoveTextScale = moveText.transform.localScale;
-        _originalTimerTextScale = timerText.transform.localScale;
-    }
-
-    private void ResetUI()
-    {
-        moveText.text = "Moves: 0";
-        timerText.text = "Time: 0";
-    }
 
     private void SubscribeToEvents()
     {
-        disposables.Add(EventBus.Subscribe<UpdateMoveCountUIEvent>(OnMoveUpdate));
-        disposables.Add(EventBus.Subscribe<UpdateTimerUIEvent>(OnTimerUpdate));
+        disposables.Add(EventBus.Subscribe<UpdateMoveCountUIEvent>(HandleMoveUpdate));
+        disposables.Add(EventBus.Subscribe<UpdateTimerUIEvent>(HandleTimerUpdate));
+
+        disposables.Add(EventBus.Subscribe<UpdateLifeUIEvent>(HandleLifeUpdate));
+        
+        disposables.Add(EventBus.Subscribe<UpdateCoinUIEvent>(HandleCoinUpdate));
     }
 
     public void OnDestroy()
@@ -158,19 +140,15 @@ public class GamePlayHUD : MonoBehaviour, IPausable, IQuittable
         }
     }
 
-    private async Task OnMoveUpdate(UpdateMoveCountUIEvent evt)
+    private async Task HandleMoveUpdate(UpdateMoveCountUIEvent evt)
     {
-        moveText.text = $"Moves: {evt.MoveCount}";
+        moveText.text = evt.MoveCount.ToString();
         await Task.CompletedTask;
     }
 
-    private async Task OnTimerUpdate(UpdateTimerUIEvent evt)
+    private async Task HandleTimerUpdate(UpdateTimerUIEvent evt)
     {
-        timerText.text = $"Time: {Mathf.CeilToInt(evt.RemainingTime)}";
-        if (evt.RemainingTime == 0)
-        {
-            //publişhh timeout
-        }
+        timerText.text = evt.RemainingTime.ToString(); 
         // Add urgency effect when time is low
         if (evt.RemainingTime < 10f)
         {
@@ -180,6 +158,17 @@ public class GamePlayHUD : MonoBehaviour, IPausable, IQuittable
         {
             timerText.color = Color.white;
         }
+
+        await Task.CompletedTask;
+    }
+    private async Task HandleLifeUpdate(UpdateLifeUIEvent evt)
+    {
+
+
+        await Task.CompletedTask;
+    }
+    private async Task HandleCoinUpdate(UpdateCoinUIEvent evt)
+    {
 
         await Task.CompletedTask;
     }

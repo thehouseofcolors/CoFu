@@ -5,11 +5,16 @@ using GameEvents;
 using System.Collections.Generic;
 using System;
 
-public class FusionProcessor : MonoBehaviour, IGameSystem
+public class FusionProcessor : MonoBehaviour, IGameSystem, IQuittable, IPausable
 {
     [Header("Dependencies")]
+    [SerializeField] private Camera mainCamera;
+    [SerializeField] private AudioManager _audioManager;
     [SerializeField] private IntermediateSlotManager _slotManager;
     [SerializeField] private GameObject _colorEffectPrefab;
+    [SerializeField] private AudioEntry whiteColor;
+    [SerializeField] private AudioEntry validCombination;
+    [SerializeField] private AudioEntry invalidCombination;
     [SerializeField] private Transform _whiteScoreTarget;
     private Transform _mergeCenterPoint;
     
@@ -28,7 +33,18 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         UnsubscribeEvents();
         return Task.CompletedTask;
     }
+    public void OnPause()
+    {
 
+    }
+    public void OnResume()
+    {
+
+    }    
+    public void OnQuit()
+    {
+
+    }
     private void SubscribeEvents()
     {
         _disposables.Add(EventBus.Subscribe<TileFuseEvent>(HandleTileFuse));
@@ -78,6 +94,7 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         var sourceColor = source.PeekColor();
         var targetColor = target.PeekColor();
         var fusionResult = ColorFusion.Fuse(sourceColor, targetColor);
+        Debug.Log($"result color {fusionResult}");
 
         if (!fusionResult.IsValidColor)
         {
@@ -92,6 +109,7 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         try
         {
             await AnimateColorMerge(source, target);
+
             await HandleFusionResult(source, target, fusionResult);
             
         }
@@ -101,6 +119,15 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
             target.SetTemporarilyDisabled(false);
         }
     }
+    private async Task HandleInvalidFusion()
+    {
+        Effects.Camera.Shake(mainCamera.transform);
+        _audioManager.PlaySFX(invalidCombination);
+        //ses ekle
+
+        await Task.Yield(); // Allow one frame for shake to register
+    }
+
 
     private async Task AnimateColorMerge(IColorSource source, IColorSource target)
     {
@@ -118,23 +145,6 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
 
         await Task.WhenAll(moveSourceTask, moveTargetTask);
     }
-
-    private async Task HandleFusionResult(IColorSource source, IColorSource target, ColorVector resultColor)
-    {
-        var mergeEffect = await CreateMergeEffect(resultColor);
-
-        if (resultColor.IsWhite)
-        {
-            await HandleWhiteResult(mergeEffect);
-            RemoveColors(source, target);
-        }
-        else
-        {
-            var success = await HandleColorResult(mergeEffect, resultColor);
-            if (success) RemoveColors(source, target);
-        }
-    }
-
     private async Task<GameObject> CreateMergeEffect(ColorVector color)
     {
         return await Effects.Gameplay.PlayMergeEffectAsync(new EffectParams
@@ -146,11 +156,28 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         });
     }
 
+    private async Task HandleFusionResult(IColorSource source, IColorSource target, ColorVector resultColor)
+    {
+        var mergeEffect = await CreateMergeEffect(resultColor);
+
+        if (resultColor.IsWhite)
+        {
+            await HandleWhiteResult(mergeEffect);
+            _audioManager.PlaySFX(whiteColor);
+            RemoveColors(source, target);
+        }
+        else
+        {
+            var success = await HandleColorResult(mergeEffect, resultColor);
+            _audioManager.PlaySFX(validCombination);
+            if (success) RemoveColors(source, target);
+        }
+    }
+
+
     private async Task HandleWhiteResult(GameObject effect)
     {
         await Effects.Gameplay.PlayMoveEffectAsync(effect, _whiteScoreTarget.position);
-        
-
     }
 
     private async Task<bool> HandleColorResult(GameObject effect, ColorVector color)
@@ -173,17 +200,7 @@ public class FusionProcessor : MonoBehaviour, IGameSystem
         target.PopTopColor();
     }
 
-    private async Task UpdateGameState()
-    {
-        PlayerPrefsService.RemainingMoves--;
-        await EventBus.PublishAuto(new UpdateMoveCountUIEvent(PlayerPrefsService.RemainingMoves));
-    }
 
-    private async Task HandleInvalidFusion()
-    {
-        Effects.Camera.Shake();
-        await Task.Yield(); // Allow one frame for shake to register
-    }
 
     private Task CreateAndMoveEffect(ColorVector color, Vector3 startPos, Vector3 endPos)
     {

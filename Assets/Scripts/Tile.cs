@@ -3,21 +3,16 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using GameEvents;
+using DG.Tweening;
 
 [RequireComponent(typeof(SpriteRenderer))]
 public class Tile : MonoBehaviour, IColorSource
 {
-    // Serialized Fields
     [SerializeField] private SpriteRenderer spriteRenderer;
-
-
-    // Properties
     private Stack<ColorVector> colorStack = new Stack<ColorVector>();
     public bool IsEmpty() => colorStack.Count == 0;
-    public bool CanSelectable { get; set; }
     public int X { get; private set; }
     public int Y { get; private set; }
-
 
     private void Awake()
     {
@@ -31,7 +26,6 @@ public class Tile : MonoBehaviour, IColorSource
         X = x;
         Y = y;
     }
-
     public ColorVector PopTopColor()
     {
         if (IsEmpty()) return ColorVector.Null;
@@ -79,52 +73,20 @@ public class Tile : MonoBehaviour, IColorSource
             UpdateVisual(); // gerçek rengi tekrar uygular
     }
 
-    private bool CanBeClicked()
-    {
-        // Add your conditions here
-        bool canClick = CanSelectable;
-        Debug.Log($"CanBeClicked: {canClick}");
-        return canClick;
-    }
-
-    public async void ReverseStack()
-    {
-        if (IsEmpty()) return;
-
-        List<ColorVector> tempList = new List<ColorVector>();
-
-        // Tüm renkleri tek tek Pop (ve animasyon oynat)
-        while (!IsEmpty())
-        {
-            var color = PopTopColor(); // Animasyon içeriyor zaten
-            tempList.Add(color);
-            await Task.Delay(100); // pop animasyonu süresi kadar bekle (opsiyonel ayarla)
-        }
-
-        // Tersten geri Push (yani stack'i terslemiş olursun)
-        for (int i = 0; i < tempList.Count; i++)
-        {
-            PushColor(tempList[i]); // Push animasyonu da var
-            await Task.Delay(100); // push animasyonu süresi kadar bekle (opsiyonel ayarla)
-        }
-    }
 
 
     public async Task OnClicked()
     {
         Debug.Log("tile cliicked");
-        if (!CanBeClicked()) return;
+        
+    
+        await Effects.Tiles.PlaySelected(transform, spriteRenderer);
+        await EventBus.PublishAuto(new TileSelectionEvent(this));
 
-        try
-        {
-            CanSelectable = false; // Prevent double clicks
-            await Effects.Tiles.PlaySelected(transform, spriteRenderer);
-            await EventBus.PublishAuto(new TileSelectionEvent(this));
-        }
-        finally
-        {
-            CanSelectable = true;
-        }
     }
 
+    void OnDestroy()
+    {
+        DOTween.Kill(this);
+    }
 }

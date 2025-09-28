@@ -14,7 +14,18 @@ public class TimeOverLayOverController : BasePanelController
     [SerializeField] private TextMeshProUGUI failText;
     private bool _isTransitioning;
 
+    public override async Task ShowAsync(object transitionData = null)
+    {
 
+        await base.ShowAsync();
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.left, true);
+    }
+
+    public override async Task HideAsync(object transitionData = null)
+    {
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.right, false);
+        await base.HideAsync();
+    }
 
     protected override void InitializeButtons()
     {
@@ -41,7 +52,7 @@ public class TimeOverLayOverController : BasePanelController
         if (_isTransitioning) return;
 
         PlayButtonClickFeedback(extraTimeButton.transform);
-        await EventBus.PublishAuto(new ExtraTimeRequestedEvent());
+        await EventBus.PublishAuto(new RewardRequestedEvent(RewardType.Time));
         _ = HideAsync();
     }
 
@@ -51,15 +62,10 @@ public class TimeOverLayOverController : BasePanelController
 
         PlayButtonClickFeedback(failButton.transform);
 
-        await EventBus.PublishAuto(new GameFailEvent());
+        // await EventBus.PublishAuto(new GamePlayFailedEvent());
+        await Task.CompletedTask;
     }
 
-    private void OnOverlayHidden()
-    {
-        // Reset button states
-        extraTimeButton.interactable = false;
-        failButton.interactable = false;
-    }
 
 
 }

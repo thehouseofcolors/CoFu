@@ -14,7 +14,18 @@ public class MoveOverLayOverController : BasePanelController
     [SerializeField] private TextMeshProUGUI failText;
     private bool _isTransitioning;
 
+    public override async Task ShowAsync(object transitionData = null)
+    {
 
+        await base.ShowAsync();
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.left, true);
+    }
+
+    public override async Task HideAsync(object transitionData = null)
+    {
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.right, false);
+        await base.HideAsync();
+    }
 
     protected override void InitializeButtons()
     {
@@ -41,7 +52,7 @@ public class MoveOverLayOverController : BasePanelController
         if (_isTransitioning) return;
 
         PlayButtonClickFeedback(extraMoveButton.transform);
-        await EventBus.PublishAuto(new ExtraMovesRequestedEvent());
+        await EventBus.PublishAuto(new RewardRequestedEvent(RewardType.Moves));
         _ = HideAsync();
     }
 
@@ -51,14 +62,8 @@ public class MoveOverLayOverController : BasePanelController
 
         PlayButtonClickFeedback(failButton.transform);
 
-        await EventBus.PublishAuto(new GameFailEvent());
-    }
-
-    private void OnOverlayHidden()
-    {
-        // Reset button states
-        extraMoveButton.interactable = false;
-        failButton.interactable = false;
+        // await EventBus.PublishAuto(new GamePlayFailedEvent());
+        await Task.CompletedTask;
     }
 
 

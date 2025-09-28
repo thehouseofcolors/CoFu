@@ -10,21 +10,14 @@ public class WinLayOverController : BasePanelController
 {
     [Header("Win Overlay References")]
     [SerializeField] private Button continueButton;
-    [SerializeField] private Button menuButton;
     [SerializeField] private TextMeshProUGUI scoreText;
-
-
-    private bool _isAnimating;
-
 
 
     protected override void InitializeButtons()
     {
         continueButton.transform.localScale = Vector3.zero;
-        menuButton.transform.localScale = Vector3.zero;
 
         AddButtonListenerWithFeedback(continueButton, OnContinueClicked);
-        AddButtonListenerWithFeedback(menuButton, OnMenuClicked);
     }
 
     protected override void InitializeText()
@@ -35,55 +28,35 @@ public class WinLayOverController : BasePanelController
         }
     }
 
-    public override async Task ShowAsync(object transitionData=null)
+    public override async Task ShowAsync(object transitionData = null)
     {
-        if (_isAnimating) return;
-        _isAnimating = true;
-        await base.ShowAsync(null);
-         _isAnimating = false;
-        
+
+        await base.ShowAsync();
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.left, true);
     }
 
-
-
-   
-    private void OnContinueClicked()
+    public override async Task HideAsync(object transitionData = null)
     {
-        if (_isAnimating) return;
-
-        Debug.Log("Continue to next level");
-
-        EventBus.PublishAuto(new NextLevelRequestedEvent());
-    }
-
-    private async void OnMenuClicked()
-    {
-        if (_isAnimating) return;
-
-        try
-        {
-            _isAnimating = true;
-            await GameStateMachine.SetStateAsync(new PlayingState());
-            
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Failed to restart game: {e}");
-        }
-        finally
-        {
-            _isAnimating = false;
-        }
-    }
-
-    public override async Task HideAsync(object transitionData=null)
-    {
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.right, false);
         await base.HideAsync();
     }
 
-    void OnDestroy()
+
+
+    private async void OnContinueClicked()
+    {
+        Debug.Log("Continue to next level");
+
+        // await EventBus.PublishAuto(new NextLevelRequestedEvent());
+        
+        await EventBus.PublishAuto(new GameStartRequestedEvent());
+
+    }
+
+
+    protected override void OnDestroy()
     {
         if (continueButton != null) continueButton.onClick.RemoveAllListeners();
-        if (menuButton != null) menuButton.onClick.RemoveAllListeners();
+        base.OnDestroy();
     }
 }

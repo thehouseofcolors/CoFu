@@ -1,46 +1,37 @@
-//panele ekle
+/// <summary>
+/// loading panel objesine eklenecek
+/// oyun ilk açıldığında veya tamamen kapandıktan sonra açıldığında gösterilecek
+/// sahte bir loading ekranı var
+/// 
+/// geliştirmesi tamamlandı değişiklik yapma
+/// </summary>
 
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Threading;
-using DG.Tweening;
+using DG.Tweening;//bu tween kullanmak için var silme.
 
+/// geliştirmesi tamamlandı değişiklik yapma
 public class LoadingPanelController : BasePanelController
 {
     [Header("Loading Settings")]
     [SerializeField] private Slider loadingBar;
     [SerializeField] private TextMeshProUGUI loadingText;
     [SerializeField] private TextMeshProUGUI CoFuText;
-    [SerializeField, Min(0.1f)] private float loadingDuration = 5f;
-    [SerializeField, Min(0)] private float completionDelay = 3f;
+    private float loadingDuration = 1f;
+    private float completionDelay = 0.2f;
 
     private CancellationTokenSource _loadingCTS;
     private Tween _bounceTween;
-
-    protected override void Awake()
-    {
-        base.Awake();
-        ResetLoadingUI();
-        // await ShowAsync();
-        // await HideAsync();
-    }
-
-    private void ResetLoadingUI()
-    {
-        if (loadingBar != null) loadingBar.value = 0;
-        if (loadingText != null) loadingText.text = "Loading... 0%";
-    }
 
     public override async Task ShowAsync(object transitionData = null)
     {
         await base.ShowAsync();
         _loadingCTS = new CancellationTokenSource();
-
-        StartBounceAnimation();
         await Effects.PanelTransition.Fade(canvasGroup, true);
-
+        StartBounceAnimation();
         await RunLoadingOperation(_loadingCTS.Token);
     }
 
@@ -122,6 +113,27 @@ public class LoadingPanelController : BasePanelController
         StopBounceAnimation();
         CancelLoadingOperation();
         base.CleanUpAfterHide();
+    }
+
+
+    public override void OnPause()
+    {
+        base.OnPause(); // panel sesini durdurur
+        StopBounceAnimation();
+        CancelLoadingOperation(); 
+    }
+
+    public override void OnResume()
+    {
+        base.OnResume(); // panel sesini başlatır
+        StartBounceAnimation();
+    }
+
+    public override void OnQuit()
+    {
+        base.OnQuit();
+        StopBounceAnimation();
+        CancelLoadingOperation();
     }
 
 #if UNITY_EDITOR

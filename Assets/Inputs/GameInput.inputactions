@@ -1,0 +1,93 @@
+{
+    "name": "GameInput",
+    "maps": [
+        {
+            "name": "GamePlay",
+            "id": "a923726b-61b3-4abf-9925-2cc73fb7d789",
+            "actions": [
+                {
+                    "name": "TilePointed",
+                    "type": "Value",
+                    "id": "a4ce145e-f2ab-4ef8-aad0-a860b6a49956",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
+                    "name": "TileClick",
+                    "type": "Button",
+                    "id": "2e7abbba-b3fe-4500-8ec4-1f7578834c12",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "d64884f8-f97a-402d-9a23-461cf0b20a1a",
+                    "path": "<Pointer>/position",
+                    "interactions": "Press",
+                    "processors": "",
+                    "groups": "",
+                    "action": "TilePointed",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "7c5169b8-6776-4590-897c-b9a80419c816",
+                    "path": "<Pointer>/press",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "TileClick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        },
+        {
+            "name": "Mobile",
+            "id": "d4be38a6-74d3-4130-a4f3-f145c1887ecc",
+            "actions": [
+                {
+                    "name": "BackClick",
+                    "type": "Button",
+                    "id": "fa3a532b-72d4-4d52-b27a-e1d50756450f",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "53081e26-109f-479e-aba8-71133927da86",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "BackClick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1cc88741-a6cf-49e8-ab20-5c976481d929",
+                    "path": "<AndroidGamepad>/{Back}",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "BackClick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}

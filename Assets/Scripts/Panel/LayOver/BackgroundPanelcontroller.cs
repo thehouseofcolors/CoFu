@@ -6,13 +6,25 @@ using System;
 using GameEvents;
 
 [RequireComponent(typeof(CanvasGroup))]
-public class BackgroundLayOverController : BasePanelController
+public class ResumeOverlayController : BasePanelController
 {
     [Header("Win Overlay References")]
     [SerializeField] private Button continueButton;
     [SerializeField] private Button menuButton;
 
+    public override async Task ShowAsync(object transitionData = null)
+    {
 
+        await base.ShowAsync();
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.left, true);
+    }
+
+    public override async Task HideAsync(object transitionData = null)
+    {
+        await Effects.PanelTransition.Slide(contentRoot, Vector2.right, false);
+        await base.HideAsync();
+    }
+    
     protected override void InitializeButtons()
     {
         continueButton.transform.localScale = Vector3.zero;
@@ -29,15 +41,14 @@ public class BackgroundLayOverController : BasePanelController
 
     private void OnContinueClicked()
     {
-
-        EventBus.PublishAuto(new GameResumeEvent());
+        
     }
 
     private async void OnMenuClicked()
     {
         try
         {
-            await GameStateMachine.SetStateAsync(new NonPlayingState());
+            await GameStateMachine.SetStateAsync(new MenuState());
 
         }
         catch (Exception e)
@@ -47,8 +58,9 @@ public class BackgroundLayOverController : BasePanelController
     }
 
 
-    void OnDestroy()
+    protected override void OnDestroy()
     {
+        base.OnDestroy();
         if (continueButton != null) continueButton.onClick.RemoveAllListeners();
         if (menuButton != null) menuButton.onClick.RemoveAllListeners();
     }
